@@ -4,7 +4,7 @@
     <div class="auth-card card shadow-lg border-0" style="max-width: 400px; width: 100%;">
         
         <div class="card-body p-4 p-md-5">
-            <!-- 1. Station Identity Header with Badge Logo -->
+            <!-- 1. StatioA Identity Header with Badge Logo -->
             <div class="auth-header text-center mb-4">
                 <div class="auth-badge-icon mb-3">
                     <img src="/logo/image.png" alt="Limbe Police Emblem" style="max-width: 80px; height: auto;">
@@ -61,16 +61,24 @@
                         <div class="input-group shadow-sm">
                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-key text-muted"></i></span>
                             <input type="password" 
-                                   class="form-control border-start-0 ps-0" 
+                                   class="form-control border-start-0 border-end-0 ps-0" 
                                    id="password" 
                                    name="password" 
                                    placeholder="••••••••" 
                                    required>
+                            <span class="input-group-text bg-white border-start-0" 
+                                  data-password-toggle="password"
+                                  role="button" 
+                                  tabindex="0"
+                                  aria-label="Show password"
+                                  style="cursor: pointer;">
+                                <i class="bi bi-eye text-muted"></i>
+                            </span>
                         </div>
                     </div>
 
                     <!-- Submit Button -->
-                    <button type="submit" class="btn w-100 py-2 shadow-sm mt-2 text-white fw-bold" style="background-color: #001f3f;">
+                    <button type="submit" class="btn w-100 py-2 shadow-sm mt-2 text-white fw-bold" style="background-color: rgb(2, 116, 176); ">
                         <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
                     </button>
                 </form>
@@ -89,5 +97,7 @@
 
     </div>
 </div>
+
+<script src="/js/password-toggle.js"></script>
 
 <%- include('../partials/footer') %>

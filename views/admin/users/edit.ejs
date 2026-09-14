@@ -77,11 +77,11 @@
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="email" class="form-label small fw-semibold text-muted">Email Address *</label>
-                                        <input type="email" class="form-control" id="email" name="email" value="<%= userToEdit.email %>" required>
+                                        <input type="email" class="form-control" id="email" name="email" value="<%= userToEdit.email %>" pattern="[^@\s]+@[^@\s]+" title="Must contain an @ symbol, e.g. name@police.gov.mw" required>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="phone_number" class="form-label small fw-semibold text-muted">Phone Number</label>
-                                        <input type="text" class="form-control" id="phone_number" name="phone_number" value="<%= userToEdit.phone_number || '' %>" placeholder="+265 ...">
+                                        <input type="tel" class="form-control" id="phone_number" name="phone_number" value="<%= userToEdit.phone_number || '' %>" placeholder="e.g. 0888123456" inputmode="numeric" pattern="[0-9]*" title="Numbers only" data-numeric-only>
                                     </div>
                                 </div>
 
@@ -117,11 +117,31 @@
                             <form action="/admin/users/<%= userToEdit.id %>/reset-password" method="POST">
                                 <div class="mb-3">
                                     <label for="new_password" class="form-label small fw-semibold text-muted">New Password</label>
-                                    <input type="password" class="form-control" id="new_password" name="new_password" required minlength="6" placeholder="Min 6 characters">
+                                    <div class="input-group">
+                                        <input type="password" class="form-control border-end-0" id="new_password" name="new_password" required minlength="6" placeholder="Min 6 characters">
+                                        <span class="input-group-text bg-white border-start-0"
+                                              data-password-toggle="new_password"
+                                              role="button"
+                                              tabindex="0"
+                                              style="cursor: pointer;"
+                                              aria-label="Show password">
+                                            <i class="bi bi-eye text-muted"></i>
+                                        </span>
+                                    </div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="confirm_password" class="form-label small fw-semibold text-muted">Confirm New Password</label>
-                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required minlength="6" placeholder="Repeat new password">
+                                    <div class="input-group">
+                                        <input type="password" class="form-control border-end-0" id="confirm_password" name="confirm_password" required minlength="6" placeholder="Repeat new password">
+                                        <span class="input-group-text bg-white border-start-0"
+                                              data-password-toggle="confirm_password"
+                                              role="button"
+                                              tabindex="0"
+                                              style="cursor: pointer;"
+                                              aria-label="Show password">
+                                            <i class="bi bi-eye text-muted"></i>
+                                        </span>
+                                    </div>
                                 </div>
                                 <button type="submit" class="btn btn-warning w-100 fw-bold mt-2">
                                     <i class="bi bi-key-fill me-1"></i>Update Password
@@ -156,5 +176,8 @@
         </div>
     </div>
 </div>
+
+<script src="/js/form-validators.js"></script>
+<script src="/js/password-toggle.js"></script>
 
 <%- include('../../partials/footer') %>

@@ -64,13 +64,13 @@
                                     <!-- Email -->
                                     <div class="col-md-6">
                                         <label for="email" class="form-label">Official Email *</label>
-                                        <input type="email" class="form-control" id="email" name="email" value="<%= formData.email || '' %>" required>
+                                        <input type="email" class="form-control" id="email" name="email" value="<%= formData.email || '' %>" placeholder="name@police.gov.mw" pattern="[^@\s]+@[^@\s]+" title="Must contain an @ symbol, e.g. name@police.gov.mw" required>
                                     </div>
 
                                     <!-- Phone Number -->
                                     <div class="col-md-6">
                                         <label for="phone_number" class="form-label">Phone Number</label>
-                                        <input type="text" class="form-control" id="phone_number" name="phone_number" value="<%= formData.phone_number || '' %>" placeholder="+265 ...">
+                                        <input type="tel" class="form-control" id="phone_number" name="phone_number" value="<%= formData.phone_number || '' %>" placeholder="e.g. 0888123456" inputmode="numeric" pattern="[0-9]*" title="Numbers only" data-numeric-only>
                                     </div>
 
                                     <!-- System Role -->
@@ -88,7 +88,17 @@
                                     <!-- Initial Password -->
                                     <div class="col-md-6">
                                         <label for="password" class="form-label">Initial Password *</label>
-                                        <input type="password" class="form-control" id="password" name="password" minlength="6" required>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control border-end-0" id="password" name="password" minlength="6" required>
+                                            <span class="input-group-text bg-white border-start-0"
+                                                  data-password-toggle="password"
+                                                  role="button"
+                                                  tabindex="0"
+                                                  style="cursor: pointer;"
+                                                  aria-label="Show password">
+                                                <i class="bi bi-eye text-muted"></i>
+                                            </span>
+                                        </div>
                                     </div>
 
                                 </div>
@@ -110,5 +120,8 @@
         </div>
     </div>
 </div>
+
+<script src="/js/form-validators.js"></script>
+<script src="/js/password-toggle.js"></script>
 
 <%- include('../../partials/footer') %>
