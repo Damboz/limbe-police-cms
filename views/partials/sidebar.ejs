@@ -5,24 +5,24 @@
 %>
 
 <aside class="sidebar">
-    <!-- 1. Station Branding & Logo Block -->
+    
     <div class="sidebar-brand d-flex align-items-center">
-        <!-- Logo on the left corner -->
+        
         <div class="sidebar-logo-container me-2">
             <img src="/logo/image.png" alt="Limbe Police Emblem" class="sidebar-logo">
         </div>
-        <!-- Text details -->
+        
         <div class="lh-sm">
             <div class="fw-bold text-white fs-6">Limbe Police Station</div>
             <small class="text-white-50 d-block" style="font-size: 0.7rem;">Case Management System</small>
         </div>
     </div>
 
-    <!-- 2. Core Navigation Menu -->
+    
     <ul class="sidebar-menu">
         <li class="sidebar-heading">Core Operations</li>
 
-        <!-- Dashboard: every role lands here, backend redirects to their specific view -->
+        
         <li>
             <a href="/dashboard" class="sidebar-link <%= (currentPath === '/dashboard' || currentPath === '/supervisor/dashboard' || currentPath === '/admin/dashboard') ? 'active' : '' %>">
                 <i class="bi bi-speedometer2"></i>
@@ -30,7 +30,7 @@
             </a>
         </li>
 
-        <!-- Case Register: all four roles can register/view cases -->
+        
         <li>
             <a href="/cases" class="sidebar-link <%= currentPath.startsWith('/cases') ? 'active' : '' %>">
                 <i class="bi bi-folder2-open"></i>
@@ -38,8 +38,7 @@
             </a>
         </li>
 
-        <!-- Evidence Ledger: Investigating Officer (assigned cases) & Station Commander (read-only oversight).
-             Admin is intentionally excluded — casework tools are outside the System Administrator's role. -->
+        
         <% if (role === 'Investigating Officer' || role === 'Station Commander') { %>
             <li>
                 <a href="/evidence" class="sidebar-link <%= currentPath.startsWith('/evidence') ? 'active' : '' %>">
@@ -49,7 +48,7 @@
             </li>
         <% } %>
 
-        <!-- Command & Oversight: Station Commander & Admin only -->
+        
         <% if (role === 'Station Commander' || role === 'Admin') { %>
             <li class="sidebar-heading mt-3">Command & Oversight</li>
 
@@ -82,7 +81,7 @@
             </li>
         <% } %>
 
-        <!-- System Administrator Operations: Admin only -->
+        
         <% if (role === 'Admin') { %>
             <li class="sidebar-heading mt-3">Administration</li>
             
@@ -110,7 +109,7 @@
 
         <li class="sidebar-heading mt-3">Account</li>
 
-        <!-- User Settings & Auth Controls: every role -->
+        
         <li>
             <a href="/auth/change-password" class="sidebar-link <%= currentPath === '/auth/change-password' ? 'active' : '' %>">
                 <i class="bi bi-key-fill text-warning"></i>
@@ -126,7 +125,7 @@
         </li>
     </ul>
 
-    <!-- 3. Sidebar Footer Info -->
+    
     <div class="sidebar-footer">
         <% if (activeUser) { %>
             <div class="d-flex align-items-center mb-2">

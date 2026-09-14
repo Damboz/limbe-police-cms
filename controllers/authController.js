@@ -1,10 +1,7 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 
-/**
- * GET /auth/login
- * Render Login Page (Redirects active sessions to role-specific dashboards)
- */
+
 exports.getLogin = (req, res) => {
     if (req.session && req.session.user) {
         const role = (req.session.user.role || '').toLowerCase();
@@ -29,10 +26,7 @@ exports.getLogin = (req, res) => {
     });
 };
 
-/**
- * POST /auth/login
- * Authenticate Personnel & Create Session with Role-Based Redirection
- */
+
 exports.postLogin = async (req, res, next) => {
     try {
         const { badge_number, password } = req.body;
@@ -47,7 +41,7 @@ exports.postLogin = async (req, res, next) => {
 
         const identifier = badge_number.trim();
 
-        // Included role_id in SELECT query
+
         const [users] = await db.execute(`
             SELECT id, badge_number, rank_title, first_name, last_name, email, password_hash, role, role_id, is_active 
             FROM users 
@@ -81,7 +75,7 @@ exports.postLogin = async (req, res, next) => {
             });
         }
 
-        // Populate session with complete officer information
+
         req.session.user = {
             id: user.id,
             badge_number: user.badge_number,
@@ -98,18 +92,18 @@ exports.postLogin = async (req, res, next) => {
             [user.id, 'USER_LOGIN', `Officer ${user.badge_number} logged in successfully.`]
         );
 
-        // Direct Supervisor / Station Commander to Supervisor Dashboard
+
         const userRole = (user.role || '').toLowerCase();
         if (userRole === 'station commander' || userRole === 'supervisor' || user.role_id === 2) {
             return res.redirect('/supervisor/dashboard');
         }
 
-        // Direct System Admin to Admin Dashboard
+
         if (userRole === 'admin' || user.role_id === 1) {
             return res.redirect('/admin/dashboard');
         }
 
-        // Fallback for General Officers
+
         res.redirect('/dashboard');
 
     } catch (err) {
@@ -117,10 +111,7 @@ exports.postLogin = async (req, res, next) => {
     }
 };
 
-/**
- * GET /auth/logout
- * Destroy Session & Redirect to Login
- */
+
 exports.logout = async (req, res) => {
     if (req.session && req.session.user) {
         const userId = req.session.user.id;
@@ -144,10 +135,7 @@ exports.logout = async (req, res) => {
     }
 };
 
-/**
- * GET /auth/change-password
- * Render Change Password View (Accessible to ALL logged-in users)
- */
+
 exports.getChangePassword = (req, res) => {
     if (!req.session || !req.session.user) {
         return res.redirect('/auth/login');
@@ -163,10 +151,7 @@ exports.getChangePassword = (req, res) => {
     });
 };
 
-/**
- * POST /auth/change-password
- * Validate & Update Password (Accessible to ALL logged-in users)
- */
+
 exports.postChangePassword = async (req, res, next) => {
     try {
         if (!req.session || !req.session.user) {

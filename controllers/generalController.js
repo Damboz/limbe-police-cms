@@ -2,10 +2,7 @@ const db = require('../config/db');
 
 const OVERDUE_DAYS_THRESHOLD = 14;
 
-/**
- * GET /dashboard (fallback branch — Investigating Officer & Counter/Intake Officer)
- * Role-aware landing dashboard.
- */
+
 exports.getDashboard = async (req, res, next) => {
     try {
         const user = req.session.user;
@@ -49,7 +46,7 @@ exports.getDashboard = async (req, res, next) => {
             });
         }
 
-        // Counter / Intake Officer fallback
+
         const [[intakeStats]] = await db.execute(`
             SELECT COUNT(*) AS totalIntake
             FROM cases
@@ -75,12 +72,7 @@ exports.getDashboard = async (req, res, next) => {
     }
 };
 
-/**
- * GET /cases/:id
- * Full case workspace — overview, notes/timeline, evidence, suspects, victims,
- * and status request state. Visible to all roles; action forms are gated by
- * the `permissions` object computed below.
- */
+
 exports.getCaseDetail = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -138,7 +130,7 @@ exports.getCaseDetail = async (req, res, next) => {
             WHERE case_id = ?
         `, [id]);
 
-        // Permission flags, computed once here so the view stays purely presentational
+
         const isAssignedInvestigator = user.role === 'Investigating Officer' && caseItem.assigned_officer_id === user.id;
         const isIntakeOfficer = user.role === 'Counter/Intake Officer';
 
@@ -163,10 +155,7 @@ exports.getCaseDetail = async (req, res, next) => {
     }
 };
 
-/**
- * POST /cases/:id/notes
- * Investigation Notes & Timeline — assigned investigator only.
- */
+
 exports.addCaseNote = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -205,11 +194,7 @@ exports.addCaseNote = async (req, res, next) => {
     }
 };
 
-/**
- * POST /cases/:id/request-status
- * Status Request — assigned investigator requests Closed or Court Pending,
- * for Supervisor sign-off. Case remains 'Under Investigation' until approved.
- */
+
 exports.requestStatusChange = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -259,15 +244,7 @@ exports.requestStatusChange = async (req, res, next) => {
     }
 };
 
-/**
- * POST /cases/:id/evidence
- * Evidence Logging & Chain of Custody — assigned investigator only.
- * Note: the `evidence` table has no file/photo column in the current schema,
- * so this logs structured item records (item number, description, category,
- * storage location) rather than an actual file upload. Adding real photo/file
- * uploads would need a new column plus multer file-handling middleware —
- * flagging this as a follow-up rather than assuming it.
- */
+
 exports.addEvidence = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -307,12 +284,7 @@ exports.addEvidence = async (req, res, next) => {
     }
 };
 
-/**
- * POST /cases/:id/suspects
- * Creates a suspect record and links it to the case.
- * Allowed for: the assigned investigator, and Counter/Intake Officer
- * (per RBAC matrix: Investigator "Assigned Only", Police Officer "Initial Entry").
- */
+
 exports.linkSuspect = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -360,10 +332,7 @@ exports.linkSuspect = async (req, res, next) => {
     }
 };
 
-/**
- * POST /cases/:id/victims
- * Allowed for: the assigned investigator, and Counter/Intake Officer (initial entry).
- */
+
 exports.linkVictim = async (req, res, next) => {
     try {
         const { id } = req.params;

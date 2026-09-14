@@ -1,19 +1,13 @@
 const db = require('../config/db');
 const PDFDocument = require('pdfkit');
 
-/**
- * Overdue threshold (in days) for cases still "Under Investigation".
- * Adjust to match station SOP if needed.
- */
+
 const OVERDUE_DAYS_THRESHOLD = 14;
 
-/**
- * GET /supervisor/dashboard
- * Supervisor Operational Dashboard aligned with limbe_police_cms schema
- */
+
 exports.getDashboard = async (req, res, next) => {
     try {
-        // 1. KPI Counts (Combined into a single query for performance)
+
         const [[kpiCounts]] = await db.execute(`
             SELECT 
                 SUM(CASE WHEN assigned_officer_id IS NULL AND status != 'Closed' THEN 1 ELSE 0 END) AS unassignedCount,
@@ -23,7 +17,7 @@ exports.getDashboard = async (req, res, next) => {
             FROM cases
         `);
 
-        // 2. Unassigned Case Queue
+
         const [unassignedCases] = await db.execute(`
             SELECT 
                 c.id, 
@@ -41,7 +35,7 @@ exports.getDashboard = async (req, res, next) => {
             LIMIT 10
         `);
 
-        // 3. Pending Status Approvals — cases with a live investigator request
+
         const [pendingApprovals] = await db.execute(`
             SELECT 
                 c.id, 
@@ -57,7 +51,7 @@ exports.getDashboard = async (req, res, next) => {
             ORDER BY c.status_requested_at ASC
         `);
 
-        // 4. Active Investigators Workload Summary
+
         const [investigatorWorkload] = await db.execute(`
             SELECT 
                 u.id, 
@@ -73,7 +67,7 @@ exports.getDashboard = async (req, res, next) => {
             ORDER BY active_case_count ASC
         `);
 
-        // 5. Active Assigned Cases (for reassignment + overdue visibility)
+
         const [assignedActiveCases] = await db.execute(`
             SELECT 
                 c.id, 
@@ -113,12 +107,7 @@ exports.getDashboard = async (req, res, next) => {
     }
 };
 
-/**
- * POST /supervisor/cases/assign
- * Assign or Reassign an Investigator to a Case
- * (Handles both first-time assignment and reassignment of an already-active case —
- *  the query simply overwrites assigned_officer_id regardless of prior value.)
- */
+
 exports.assignCase = async (req, res, next) => {
     try {
         const { case_id, investigator_id, notes } = req.body;
@@ -129,7 +118,7 @@ exports.assignCase = async (req, res, next) => {
             return res.redirect('/supervisor/dashboard');
         }
 
-        // Verify target user is an active investigator
+
         const [inv] = await db.execute(
             `SELECT id, badge_number, rank_title, last_name 
              FROM users 
@@ -142,11 +131,11 @@ exports.assignCase = async (req, res, next) => {
             return res.redirect('/supervisor/dashboard');
         }
 
-        // Check if this case was already assigned (to distinguish assign vs reassign in the audit log)
+
         const [existing] = await db.execute('SELECT assigned_officer_id FROM cases WHERE id = ?', [case_id]);
         const isReassignment = existing.length > 0 && existing[0].assigned_officer_id !== null;
 
-        // Assign case and set status to 'Under Investigation'
+
         const [updateResult] = await db.execute(
             `UPDATE cases 
              SET assigned_officer_id = ?, status = 'Under Investigation', updated_at = NOW() 
@@ -159,7 +148,7 @@ exports.assignCase = async (req, res, next) => {
             return res.redirect('/supervisor/dashboard');
         }
 
-        // Record entry in audit_logs
+
         await db.execute(
             `INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)`,
             [
@@ -176,13 +165,10 @@ exports.assignCase = async (req, res, next) => {
     }
 };
 
-/**
- * POST /supervisor/cases/approve-status
- * Approve or Reject a Status Change (Closure / Court Approval)
- */
+
 exports.processStatusApproval = async (req, res, next) => {
     try {
-        const { case_id, decision, supervisor_notes } = req.body; // decision: 'APPROVE' or 'REJECT'
+        const { case_id, decision, supervisor_notes } = req.body;
         const supervisorId = req.session?.user?.id;
 
         if (!['APPROVE', 'REJECT'].includes(decision)) {
@@ -197,8 +183,7 @@ exports.processStatusApproval = async (req, res, next) => {
         }
 
         const currentCase = caseRows[0];
-        // On approval, apply whatever the investigator actually requested
-        // (Closed or Court Pending) — not a hardcoded value.
+
         const targetStatus = decision === 'APPROVE' ? currentCase.requested_status : 'Under Investigation';
 
         await db.execute(
@@ -225,10 +210,7 @@ exports.processStatusApproval = async (req, res, next) => {
     }
 };
 
-/**
- * GET /supervisor/analytics
- * Crime Trend Analytics & Hotspot Report
- */
+
 exports.getAnalytics = async (req, res, next) => {
     try {
         const [
@@ -237,7 +219,7 @@ exports.getAnalytics = async (req, res, next) => {
             [hotspots],
             [statusDistribution]
         ] = await Promise.all([
-            // 1. Monthly Trends (12 Months)
+
             db.execute(`
                 SELECT 
                     DATE_FORMAT(created_at, '%Y-%m') AS month_key,
@@ -250,7 +232,7 @@ exports.getAnalytics = async (req, res, next) => {
                 ORDER BY month_key ASC
             `),
 
-            // 2. Crime Category Breakdown
+
             db.execute(`
                 SELECT 
                     cc.name AS crime_category,
@@ -262,7 +244,7 @@ exports.getAnalytics = async (req, res, next) => {
                 ORDER BY total_incidents DESC
             `),
 
-            // 3. Hotspot Analysis (Top 10 Incident Locations)
+
             db.execute(`
                 SELECT 
                     incident_location AS location,
@@ -276,7 +258,7 @@ exports.getAnalytics = async (req, res, next) => {
                 LIMIT 10
             `),
 
-            // 4. Status Distribution
+
             db.execute(`
                 SELECT 
                     status,
@@ -307,9 +289,7 @@ exports.getAnalytics = async (req, res, next) => {
     }
 };
 
-/**
- * GET /supervisor/api/analytics-data
- */
+
 exports.getAnalyticsData = async (req, res, next) => {
     try {
         const [[trends], [categories], [hotspots]] = await Promise.all([
@@ -345,15 +325,9 @@ exports.getAnalyticsData = async (req, res, next) => {
     }
 };
 
-/* ============================================================================
-   PDF REPORT GENERATION
-   All three reports stream a PDF directly to the response using pdfkit.
-   Requires: npm install pdfkit
-   ============================================================================ */
 
-/**
- * Shared PDF letterhead used across all three reports for a consistent look.
- */
+
+
 function drawReportHeader(doc, reportTitle) {
     doc.fillColor('#0274B0')
         .fontSize(18)
@@ -382,10 +356,7 @@ function drawSectionTitle(doc, text) {
     doc.moveDown(0.3);
 }
 
-/**
- * GET /supervisor/reports/station-performance
- * Station Performance Summary — totals, resolution rate, category breakdown, workload
- */
+
 exports.exportStationPerformancePDF = async (req, res, next) => {
     try {
         const [[totals]] = await db.execute(`
@@ -457,10 +428,7 @@ exports.exportStationPerformancePDF = async (req, res, next) => {
     }
 };
 
-/**
- * GET /supervisor/reports/crime-statistics
- * Weekly / Monthly Crime Statistics — trend + hotspot summary
- */
+
 exports.exportCrimeStatsPDF = async (req, res, next) => {
     try {
         const [monthlyTrends] = await db.execute(`
@@ -521,10 +489,7 @@ exports.exportCrimeStatsPDF = async (req, res, next) => {
     }
 };
 
-/**
- * GET /supervisor/reports/officer-productivity
- * Officer Productivity Metrics — per-investigator load and resolution rate
- */
+
 exports.exportOfficerProductivityPDF = async (req, res, next) => {
     try {
         const [officers] = await db.execute(`

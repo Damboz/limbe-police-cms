@@ -8,7 +8,7 @@
 
         <div class="container-fluid py-4">
 
-            <!-- Page Header -->
+            
             <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
                 <div>
                     <h4 class="fw-bold mb-1" style="color: var(--mps-navy);">
@@ -26,14 +26,14 @@
                 </div>
             </div>
 
-            <!-- Metric Summary Cards -->
+            
             <div class="row g-3 mb-4">
                 <div class="col-12 col-sm-6 col-xl-4">
                     <div class="card border-0 shadow-sm p-3">
                         <div class="metric-card">
                             <div>
                                 <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Total Cases Recorded</span>
-                                <h3 class="fw-bold mb-0" style="color: var(--mps-navy);"><%= metrics.totalCases %></h3>
+                                <h3 class="fw-bold mb-0" style="color: var(--mps-navy);"><%= metrics.totalCases || 0 %></h3>
                             </div>
                             <div class="metric-icon navy">
                                 <i class="bi bi-folder-fill"></i>
@@ -47,7 +47,7 @@
                         <div class="metric-card">
                             <div>
                                 <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Closed Cases</span>
-                                <h3 class="fw-bold mb-0" style="color: var(--mps-success);"><%= metrics.closedCases %></h3>
+                                <h3 class="fw-bold mb-0" style="color: var(--mps-success);"><%= metrics.closedCases || 0 %></h3>
                             </div>
                             <div class="metric-icon success">
                                 <i class="bi bi-check-circle-fill"></i>
@@ -61,7 +61,7 @@
                         <div class="metric-card">
                             <div>
                                 <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Resolution Rate</span>
-                                <h3 class="fw-bold mb-0" style="color: var(--mps-blue);"><%= metrics.resolutionRate %>%</h3>
+                                <h3 class="fw-bold mb-0" style="color: var(--mps-blue);"><%= metrics.resolutionRate || 0 %>%</h3>
                             </div>
                             <div class="metric-icon blue">
                                 <i class="bi bi-speedometer2"></i>
@@ -71,7 +71,7 @@
                 </div>
             </div>
 
-            <!-- Charts Row: Monthly Trend + Status Distribution -->
+            
             <div class="row g-4 mb-4">
                 <div class="col-lg-8">
                     <div class="card border-0 shadow-sm h-100">
@@ -100,7 +100,7 @@
                 </div>
             </div>
 
-            <!-- Category Breakdown + Hotspots -->
+            
             <div class="row g-4 mb-4">
                 <div class="col-lg-6">
                     <div class="card border-0 shadow-sm h-100">
@@ -122,10 +122,10 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <% categoryBreakdown.forEach(cat => { %>
+                                    <% (categoryBreakdown || []).forEach(cat => { %>
                                         <tr>
-                                            <td class="small"><%= cat.crime_category %></td>
-                                            <td class="text-end small fw-semibold"><%= cat.total_incidents %></td>
+                                            <td class="small"><%= cat.crime_category || 'N/A' %></td>
+                                            <td class="text-end small fw-semibold"><%= cat.total_incidents || 0 %></td>
                                             <td class="text-end small text-muted"><%= cat.percentage || 0 %>%</td>
                                         </tr>
                                     <% }) %>
@@ -141,7 +141,7 @@
                             <h6 class="mb-0 fw-bold">
                                 <i class="bi bi-geo-alt-fill me-2 text-warning"></i>Top Incident Hotspots
                             </h6>
-                            <span class="badge bg-gold text-dark">Top <%= hotspots.length %></span>
+                            <span class="badge bg-gold text-dark">Top <%= (hotspots || []).length %></span>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
@@ -154,7 +154,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <% if (hotspots.length === 0) { %>
+                                    <% if (!hotspots || hotspots.length === 0) { %>
                                         <tr>
                                             <td colspan="4" class="text-center py-4 text-muted">No location data available yet.</td>
                                         </tr>
@@ -165,9 +165,9 @@
                                                     <span class="badge bg-light text-dark border me-2"><%= i + 1 %></span>
                                                     <%= h.location %>
                                                 </td>
-                                                <td class="text-end fw-bold small"><%= h.incident_count %></td>
-                                                <td class="text-end small" style="color: var(--mps-success);"><%= h.resolved_count %></td>
-                                                <td class="text-end small" style="color: var(--mps-warning);"><%= h.active_count %></td>
+                                                <td class="text-end fw-bold small"><%= h.incident_count || 0 %></td>
+                                                <td class="text-end small" style="color: var(--mps-success);"><%= h.resolved_count || 0 %></td>
+                                                <td class="text-end small" style="color: var(--mps-warning);"><%= h.active_count || 0 %></td>
                                             </tr>
                                         <% }) %>
                                     <% } %>
@@ -179,17 +179,15 @@
             </div>
 
         </div>
-    </div>
-</div>
 
 <%- include('../partials/footer') %>
 
-<!-- Chart.js (loaded from CDN, consistent with the Bootstrap/Bootstrap Icons CDN pattern used in header.ejs) -->
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Design system colors pulled to match style.css tokens
+
         const COLORS = {
             navy: 'rgb(2, 116, 176)',
             navyFill: 'rgba(2, 116, 176, 0.12)',
@@ -201,10 +199,10 @@
             slate: 'rgb(100, 116, 139)'
         };
 
-        // ---- Monthly Trend Chart (Line) ----
-        const monthlyLabels = <%- JSON.stringify(monthlyTrends.map(m => m.month_label)) %>;
-        const monthlyTotals = <%- JSON.stringify(monthlyTrends.map(m => m.total_cases)) %>;
-        const monthlySevere = <%- JSON.stringify(monthlyTrends.map(m => m.severe_cases)) %>;
+
+        const monthlyLabels = <%- JSON.stringify((monthlyTrends || []).map(m => m.month_label)) %>;
+        const monthlyTotals = <%- JSON.stringify((monthlyTrends || []).map(m => m.total_cases)) %>;
+        const monthlySevere = <%- JSON.stringify((monthlyTrends || []).map(m => m.severe_cases)) %>;
 
         new Chart(document.getElementById('monthlyTrendChart'), {
             type: 'line',
@@ -240,9 +238,9 @@
             }
         });
 
-        // ---- Status Distribution Chart (Doughnut) ----
-        const statusLabels = <%- JSON.stringify(statusDistribution.map(s => s.status)) %>;
-        const statusCounts = <%- JSON.stringify(statusDistribution.map(s => s.total_count)) %>;
+
+        const statusLabels = <%- JSON.stringify((statusDistribution || []).map(s => s.status)) %>;
+        const statusCounts = <%- JSON.stringify((statusDistribution || []).map(s => s.total_count)) %>;
         const statusColorMap = {
             'Reported': COLORS.info,
             'Under Investigation': COLORS.warning,
@@ -268,9 +266,9 @@
             }
         });
 
-        // ---- Category Breakdown Chart (Horizontal Bar) ----
-        const categoryLabels = <%- JSON.stringify(categoryBreakdown.map(c => c.crime_category)) %>;
-        const categoryCounts = <%- JSON.stringify(categoryBreakdown.map(c => c.total_incidents)) %>;
+
+        const categoryLabels = <%- JSON.stringify((categoryBreakdown || []).map(c => c.crime_category)) %>;
+        const categoryCounts = <%- JSON.stringify((categoryBreakdown || []).map(c => c.total_incidents)) %>;
 
         new Chart(document.getElementById('categoryBreakdownChart'), {
             type: 'bar',

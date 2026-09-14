@@ -1,10 +1,4 @@
-/**
- * ============================================================================
- * Limbe Police Station Case Management System (CMS) - Web Application
- * File: app.js
- * Engine: Node.js / Express / EJS / MySQL2
- * ============================================================================
- */
+
 
 const express = require('express');
 const path = require('path');
@@ -14,16 +8,14 @@ const dotenv = require('dotenv');
 const session = require('express-session');
 const flash = require('connect-flash');
 
-// Load environment variables
+
 dotenv.config();
 
-// Initialize Express Application
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ============================================================================
-// 1. DATABASE CONNECTION POOL SETUP
-// ============================================================================
+
 let dbPool;
 try {
     dbPool = require('./config/db');
@@ -41,45 +33,41 @@ try {
     });
 }
 
-// ============================================================================
-// 2. ROUTE IMPORTS
-// ============================================================================
+
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const supervisorRoutes = require('./routes/supervisorRoutes');
 const caseRoutes = require('./routes/caseRoutes');
 const generalController = require('./controllers/generalController');
 
-// ============================================================================
-// 3. VIEW ENGINE & MIDDLEWARE SETUP
-// ============================================================================
 
-// Set EJS as view engine
+
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Core Middlewares
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Express Session Configuration
+
 app.use(session({
     secret: process.env.SESSION_SECRET || 'limbe_police_cms_secure_session_key',
     resave: false,
     saveUninitialized: false,
     cookie: { 
-        maxAge: 1000 * 60 * 60 * 8, // 8 Hours Session Lifetime
+        maxAge: 1000 * 60 * 60 * 8,
         httpOnly: true
     }
 }));
 
-// Flash Messages
+
 app.use(flash());
 
-// Pass Global Variables to Views
+
 app.use((req, res, next) => {
     res.locals.session = req.session;
     res.locals.currentUser = req.session ? req.session.user : null;
@@ -88,7 +76,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// Route Guard Middleware
+
 const isAuthenticated = (req, res, next) => {
     if (req.session && req.session.user) {
         return next();
@@ -96,11 +84,9 @@ const isAuthenticated = (req, res, next) => {
     res.redirect('/auth/login');
 };
 
-// ============================================================================
-// 4. WEB APPLICATION ROUTES
-// ============================================================================
 
-// Root Route
+
+
 app.get('/', (req, res) => {
     if (req.session && req.session.user) {
         return res.redirect('/dashboard');
@@ -108,19 +94,10 @@ app.get('/', (req, res) => {
     res.redirect('/auth/login');
 });
 
-// ----------------------------------------------------------------------------
-// A. AUTHENTICATION ROUTES
-// ----------------------------------------------------------------------------
-// Handled entirely by routes/authRoutes.js -> controllers/authController.js
-// (login, logout, change-password, and role-based post-login redirection).
-// The previous inline app.get/app.post handlers here were duplicating and
-// overriding that controller logic, which is why role-based redirects were
-// never firing. Removed in favor of the single source of truth below.
+
 app.use('/auth', authRoutes);
 
-// ----------------------------------------------------------------------------
-// B. DASHBOARD ROUTE (role-aware redirect)
-// ----------------------------------------------------------------------------
+
 app.get('/dashboard', isAuthenticated, (req, res, next) => {
     const role = (req.session.user.role || '').toLowerCase();
     const roleId = req.session.user.role_id;
@@ -134,31 +111,23 @@ app.get('/dashboard', isAuthenticated, (req, res, next) => {
 
     
 
-    // Fallback for Investigating Officer / Counter-Intake Officer —
-    // delegated to generalController for role-aware dashboard data
-    // (assigned cases + KPIs for investigators, recent intakes for intake officers).
+
     return generalController.getDashboard(req, res, next);
 });
 
-// ----------------------------------------------------------------------------
-// C. MOUNTED MODULAR ROUTERS
-// ----------------------------------------------------------------------------
+
 app.use('/admin', adminRoutes);
 app.use('/supervisor', supervisorRoutes);
 app.use('/cases', caseRoutes);
 
-// ----------------------------------------------------------------------------
-// D. REST API ENDPOINTS
-// ----------------------------------------------------------------------------
+
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'UP', system: 'Limbe Police Station CMS' });
 });
 
-// ============================================================================
-// 5. ERROR HANDLERS & SERVER STARTUP
-// ============================================================================
 
-// 404 Route Handler
+
+
 app.use((req, res) => {
     res.status(404).send(`
         <div style="font-family: sans-serif; text-align: center; padding: 50px;">
@@ -169,13 +138,13 @@ app.use((req, res) => {
     `);
 });
 
-// Global Error Handler
+
 app.use((err, req, res, next) => {
     console.error('Unhandled System Error:', err);
     res.status(500).send('An unexpected system error occurred.');
 });
 
-// Start Server
+
 app.listen(PORT, () => {
     console.log(`Limbe Police Station Web Portal Live: http://localhost:${PORT}`);
 });

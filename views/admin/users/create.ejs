@@ -29,13 +29,13 @@
                             <form action="/admin/users/create" method="POST">
                                 <div class="row g-3">
                                     
-                                    <!-- Badge Number -->
+                                    
                                     <div class="col-md-6">
                                         <label for="badge_number" class="form-label">Badge / Service # *</label>
                                         <input type="text" class="form-control" id="badge_number" name="badge_number" value="<%= formData.badge_number || '' %>" placeholder="e.g. MPS-4821" required>
                                     </div>
 
-                                    <!-- Rank Title -->
+                                    
                                     <div class="col-md-6">
                                         <label for="rank_title" class="form-label">Official Rank *</label>
                                         <select class="form-select" id="rank_title" name="rank_title" required>
@@ -49,31 +49,31 @@
                                         </select>
                                     </div>
 
-                                    <!-- First Name -->
+                                    
                                     <div class="col-md-6">
                                         <label for="first_name" class="form-label">First Name *</label>
                                         <input type="text" class="form-control" id="first_name" name="first_name" value="<%= formData.first_name || '' %>" required>
                                     </div>
 
-                                    <!-- Last Name -->
+                                    
                                     <div class="col-md-6">
                                         <label for="last_name" class="form-label">Last Name *</label>
                                         <input type="text" class="form-control" id="last_name" name="last_name" value="<%= formData.last_name || '' %>" required>
                                     </div>
 
-                                    <!-- Email -->
+                                    
                                     <div class="col-md-6">
                                         <label for="email" class="form-label">Official Email *</label>
                                         <input type="email" class="form-control" id="email" name="email" value="<%= formData.email || '' %>" placeholder="name@police.gov.mw" pattern="[^@\s]+@[^@\s]+" title="Must contain an @ symbol, e.g. name@police.gov.mw" required>
                                     </div>
 
-                                    <!-- Phone Number -->
+                                    
                                     <div class="col-md-6">
                                         <label for="phone_number" class="form-label">Phone Number</label>
                                         <input type="tel" class="form-control" id="phone_number" name="phone_number" value="<%= formData.phone_number || '' %>" placeholder="e.g. 0888123456" inputmode="numeric" pattern="[0-9]*" title="Numbers only" data-numeric-only>
                                     </div>
 
-                                    <!-- System Role -->
+                                    
                                     <div class="col-md-6">
                                         <label for="role" class="form-label">System Access Role (RBAC) *</label>
                                         <select class="form-select" id="role" name="role" required>
@@ -85,7 +85,7 @@
                                         </select>
                                     </div>
 
-                                    <!-- Initial Password -->
+                                    
                                     <div class="col-md-6">
                                         <label for="password" class="form-label">Initial Password *</label>
                                         <div class="input-group">

@@ -1,12 +1,6 @@
-/**
- * ============================================================================
- * Limbe Police Station CMS - Authentication & Authorization Middleware
- * ============================================================================
- */
 
-/**
- * Middleware to check if user is authenticated
- */
+
+
 exports.isAuthenticated = (req, res, next) => {
     if (req.session && req.session.user) {
         return next();
@@ -17,9 +11,7 @@ exports.isAuthenticated = (req, res, next) => {
     return res.redirect('/auth/login');
 };
 
-/**
- * Middleware to restrict access strictly to System Administrators
- */
+
 exports.isAdmin = (req, res, next) => {
     if (req.session && req.session.user && req.session.user.role === 'Admin') {
         return next();
@@ -30,10 +22,7 @@ exports.isAdmin = (req, res, next) => {
     });
 };
 
-/**
- * Flexible middleware to restrict access based on allowed user roles
- * Example usage: authorizeRoles('SUPERVISOR', 'ADMIN') or authorizeRoles('Officer')
- */
+
 exports.authorizeRoles = (...allowedRoles) => {
     return (req, res, next) => {
         if (!req.session || !req.session.user) {
@@ -43,7 +32,7 @@ exports.authorizeRoles = (...allowedRoles) => {
             return res.redirect('/auth/login');
         }
 
-        // Case-insensitive role comparison
+
         const userRole = req.session.user.role ? String(req.session.user.role).toUpperCase() : '';
         const normalizedAllowedRoles = allowedRoles.map(role => String(role).toUpperCase());
 

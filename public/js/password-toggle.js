@@ -1,24 +1,4 @@
-/**
- * Password Visibility Toggle
- * -----------------------------------------------------------------------
- * Works on ANY page. To wire up a password field, just add:
- *
- *   1. An <input type="password" id="some_id"> field
- *   2. A toggle trigger (button/span) next to it with:
- *        data-password-toggle="some_id"
- *      ...and a Bootstrap Icon <i> element inside it (bi-eye by default)
- *
- * Example:
- *   <div class="input-group">
- *     <input type="password" id="new_password" class="form-control">
- *     <span class="input-group-text" data-password-toggle="new_password" role="button" tabindex="0">
- *       <i class="bi bi-eye text-muted"></i>
- *     </span>
- *   </div>
- *
- * No per-field JS or unique icon IDs needed — this script auto-discovers
- * every [data-password-toggle] element on the page, wherever it's included.
- */
+
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-password-toggle]').forEach((toggle) => {
         const targetId = toggle.getAttribute('data-password-toggle');
@@ -42,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         toggle.addEventListener('click', toggleVisibility);
 
-        // Keyboard accessibility, since the trigger is often a <span>, not a <button>
+
         toggle.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();

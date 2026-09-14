@@ -1,9 +1,6 @@
 const db = require('../config/db');
 
-/**
- * Generates a unique Occurrence Book (OB) number for a new case.
- * Format: OB-YYYYMMDD-NNNN (sequential per calendar day)
- */
+
 async function generateObNumber() {
     const today = new Date();
     const datePart = today.toISOString().slice(0, 10).replace(/-/g, '');
@@ -16,11 +13,7 @@ async function generateObNumber() {
     return `OB-${datePart}-${sequence}`;
 }
 
-/**
- * GET /cases
- * Case Register — list of all recorded cases.
- * Accessible to all authenticated roles per the RBAC matrix (everyone can view/register cases).
- */
+
 exports.getCaseList = async (req, res, next) => {
     try {
         const [cases] = await db.execute(`
@@ -48,10 +41,7 @@ exports.getCaseList = async (req, res, next) => {
     }
 };
 
-/**
- * GET /cases/new
- * Render the New Case Registration form
- */
+
 exports.getNewCaseForm = async (req, res, next) => {
     try {
         const [categories] = await db.execute('SELECT id, name, severity_level FROM crime_categories ORDER BY name ASC');
@@ -67,12 +57,7 @@ exports.getNewCaseForm = async (req, res, next) => {
     }
 };
 
-/**
- * POST /cases
- * Create a new case (Occurrence Book entry).
- * Available to all authenticated roles — Admin, Station Commander, Investigating Officer,
- * and Counter/Intake Officer can all register a case per the RBAC matrix.
- */
+
 exports.createCase = async (req, res, next) => {
     try {
         const {
@@ -91,7 +76,7 @@ exports.createCase = async (req, res, next) => {
 
         const intakeOfficerId = req.session?.user?.id;
 
-        // Required-field validation — mirrors the NOT NULL constraints on the `cases` table
+
         if (!complainant_name || !complainant_phone || !category_id || !unit_id || !incident_location || !incident_details) {
             req.flash('error', 'Please complete all required fields before submitting.');
             return res.redirect('/cases/new');

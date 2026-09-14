@@ -1,9 +1,7 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 
-/**
- * Helper: Map incoming role strings to canonical DB ENUM and role_id FK
- */
+
 const getRoleMapping = (roleInput) => {
     const input = (roleInput || '').toString().toLowerCase().trim();
 
@@ -23,17 +21,14 @@ const getRoleMapping = (roleInput) => {
     }
 };
 
-/**
- * GET /admin/dashboard
- * System Overview & Quick Admin Stats
- */
+
 exports.getAdminDashboard = async (req, res, next) => {
     try {
         const [[{ totalUsers }]] = await db.execute('SELECT COUNT(*) AS totalUsers FROM users');
         const [[{ activeUsers }]] = await db.execute('SELECT COUNT(*) AS activeUsers FROM users WHERE is_active = 1');
         const [[{ totalLogins }]] = await db.execute('SELECT COUNT(*) AS totalLogins FROM audit_logs WHERE action = "USER_LOGIN"');
 
-        // Fetch recent personnel for quick dashboard editing
+
         const [users] = await db.execute(`
             SELECT id, badge_number, rank_title, first_name, last_name, email, role, role_id, is_active 
             FROM users 
@@ -62,10 +57,7 @@ exports.getAdminDashboard = async (req, res, next) => {
     }
 };
 
-/**
- * GET /admin/users
- * User List & Search Filtering
- */
+
 exports.getUsers = async (req, res, next) => {
     try {
         const search = req.query.search ? `%${req.query.search.trim()}%` : '%';
@@ -103,10 +95,7 @@ exports.getUsers = async (req, res, next) => {
     }
 };
 
-/**
- * GET /admin/users/create
- * Form to Register New Personnel
- */
+
 exports.getCreateUser = async (req, res, next) => {
     try {
         const [roles] = await db.execute('SELECT * FROM roles ORDER BY id ASC');
@@ -124,10 +113,7 @@ exports.getCreateUser = async (req, res, next) => {
     }
 };
 
-/**
- * POST /admin/users/create
- * Insert New Officer into Database with linked role_id and role
- */
+
 exports.postCreateUser = async (req, res, next) => {
     try {
         const { badge_number, rank_title, first_name, last_name, email, phone_number, role, unit_id, password } = req.body;
@@ -160,7 +146,7 @@ exports.postCreateUser = async (req, res, next) => {
             });
         }
 
-        // Map role name and role_id dynamically
+
         const roleMap = getRoleMapping(role);
         const hashedPassword = await bcrypt.hash(password, 10);
         const parsedUnitId = unit_id ? parseInt(unit_id, 10) : null;
@@ -201,10 +187,7 @@ exports.postCreateUser = async (req, res, next) => {
     }
 };
 
-/**
- * GET /admin/users/:id/edit
- * Render Form to Edit User Details & Role
- */
+
 exports.getEditUser = async (req, res, next) => {
     try {
         const userId = req.params.id;
@@ -234,10 +217,7 @@ exports.getEditUser = async (req, res, next) => {
     }
 };
 
-/**
- * POST /admin/users/:id/edit
- * Update Officer Details & Role Assignment (syncs role and role_id)
- */
+
 exports.postEditUser = async (req, res, next) => {
     try {
         const userId = req.params.id;
@@ -258,7 +238,7 @@ exports.postEditUser = async (req, res, next) => {
             return res.redirect(`/admin/users/${userId}/edit`);
         }
 
-        // Map role name and role_id dynamically
+
         const roleMap = getRoleMapping(role);
         const parsedUnitId = unit_id ? parseInt(unit_id, 10) : null;
 
@@ -295,10 +275,7 @@ exports.postEditUser = async (req, res, next) => {
     }
 };
 
-/**
- * POST /admin/users/:id/reset-password
- * Reset Officer Password
- */
+
 exports.postResetPassword = async (req, res, next) => {
     try {
         const userId = req.params.id;
@@ -338,10 +315,7 @@ exports.postResetPassword = async (req, res, next) => {
     }
 };
 
-/**
- * POST /admin/users/:id/toggle-status
- * Activate or Deactivate Officer Account
- */
+
 exports.toggleUserStatus = async (req, res, next) => {
     try {
         const userId = req.params.id;
@@ -378,10 +352,7 @@ exports.toggleUserStatus = async (req, res, next) => {
     }
 };
 
-/**
- * GET /admin/audit-logs
- * View System Audit Trail
- */
+
 exports.getAuditLogs = async (req, res, next) => {
     try {
         const [logs] = await db.execute(`

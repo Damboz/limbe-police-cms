@@ -8,7 +8,7 @@
 
         <div class="container-fluid py-4">
 
-            <!-- Page Header -->
+            
             <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
                 <div>
                     <h4 class="fw-bold mb-1" style="color: var(--mps-navy);">
@@ -33,7 +33,7 @@
                 </div>
             </div>
 
-            <!-- Flash Alert Messages -->
+            
             <% if (typeof success !== 'undefined' && success && success.length > 0) { %>
                 <div class="alert alert-success alert-dismissible fade show small mb-4" role="alert">
                     <i class="bi bi-check-circle-fill me-2"></i><%= success %>
@@ -48,7 +48,7 @@
                 </div>
             <% } %>
 
-            <!-- KPI Summary Cards -->
+            
             <div class="row g-3 mb-4">
                 <div class="col-12 col-sm-6 col-xl-3">
                     <div class="card border-0 shadow-sm p-3">
@@ -107,10 +107,10 @@
                 </div>
             </div>
 
-            <!-- Main Content Section: Unassigned Queue & Pending Approvals -->
+            
             <div class="row g-4 mb-4">
 
-                <!-- Unassigned Cases Queue -->
+                
                 <div class="col-lg-7">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-navy text-white d-flex align-items-center justify-content-between py-3">
@@ -179,7 +179,7 @@
                     </div>
                 </div>
 
-                <!-- Pending Approvals (Closure / Court Transfer) -->
+                
                 <div class="col-lg-5">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-navy text-white d-flex align-items-center justify-content-between py-3">
@@ -243,7 +243,7 @@
 
             </div>
 
-            <!-- Active Assigned Cases (Reassignment + Overdue Visibility) -->
+            
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -320,7 +320,7 @@
                 </div>
             </div>
 
-            <!-- Active Investigator Workload Tracking -->
+            
             <div class="row">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
@@ -377,9 +377,9 @@
     </div>
 </div>
 
-<!-- ========================================== -->
-<!-- MODAL 1: ASSIGN / REASSIGN CASE            -->
-<!-- ========================================== -->
+
+
+
 <div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -432,9 +432,9 @@
     </div>
 </div>
 
-<!-- ========================================== -->
-<!-- MODAL 2: PROCESS STATUS APPROVAL           -->
-<!-- ========================================== -->
+
+
+
 <div class="modal fade" id="approvalModal" tabindex="-1" aria-labelledby="approvalModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -480,10 +480,10 @@
 
 <%- include('../partials/footer') %>
 
-<!-- Client-side Script to handle Dynamic Modal Data Binding -->
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Modal 1: Assign / Reassign Case Data Population
+
         const assignButtons = document.querySelectorAll('.btn-assign');
         const assignModalLabel = document.getElementById('assignModalLabel');
         const assignSubmitBtn = document.getElementById('modal_assign_submit_btn');
@@ -517,7 +517,7 @@
             });
         });
 
-        // Modal 2: Approval Review Data Population
+
         const approvalButtons = document.querySelectorAll('.btn-approval');
         approvalButtons.forEach(btn => {
             btn.addEventListener('click', function () {
