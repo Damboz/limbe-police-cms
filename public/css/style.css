@@ -150,6 +150,15 @@ a:hover {
   padding-bottom: 3.5rem;
 }
 
+.filter-panel {
+  position: sticky;
+  top: calc(var(--mps-topbar-height) + 1rem);
+}
+
+.table-responsive table {
+  min-width: 880px;
+}
+
 
 .page-header {
   display: flex;
@@ -506,6 +515,18 @@ a:hover {
 .btn-navy:hover, .btn-navy:focus {
   background-color: var(--mps-navy-hover);
   border-color: var(--mps-navy-hover);
+  color: rgb(255, 255, 255);
+  box-shadow: 0 4px 12px rgba(2, 116, 176, 0.25);
+}
+
+.btn-outline-navy {
+  border-color: var(--mps-navy);
+  color: var(--mps-navy);
+}
+
+.btn-outline-navy:hover, .btn-outline-navy:focus {
+  background-color: var(--mps-navy);
+  border-color: var(--mps-navy);
   color: rgb(255, 255, 255);
   box-shadow: 0 4px 12px rgba(2, 116, 176, 0.25);
 }

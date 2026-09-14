@@ -38,6 +38,7 @@ const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const supervisorRoutes = require('./routes/supervisorRoutes');
 const caseRoutes = require('./routes/caseRoutes');
+const evidenceRoutes = require('./routes/evidenceRoutes');
 const generalController = require('./controllers/generalController');
 
 
@@ -73,6 +74,7 @@ app.use((req, res, next) => {
     res.locals.currentUser = req.session ? req.session.user : null;
     res.locals.error = req.flash('error');
     res.locals.success = req.flash('success');
+    res.locals.currentPath = req.path;
     next();
 });
 
@@ -119,6 +121,7 @@ app.get('/dashboard', isAuthenticated, (req, res, next) => {
 app.use('/admin', adminRoutes);
 app.use('/supervisor', supervisorRoutes);
 app.use('/cases', caseRoutes);
+app.use('/evidence', evidenceRoutes);
 
 
 app.get('/api/health', (req, res) => {
