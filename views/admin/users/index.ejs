@@ -49,10 +49,10 @@
                         <div class="col-12 col-md-4">
                             <select name="role" class="form-select" onchange="this.form.submit()">
                                 <option value="">All Roles</option>
-                                <option value="Officer" <%= roleFilter === 'Officer' ? 'selected' : '' %>>Officer</option>
-                                <option value="Investigator" <%= roleFilter === 'Investigator' ? 'selected' : '' %>>Investigator</option>
-                                <option value="Supervisor" <%= roleFilter === 'Supervisor' ? 'selected' : '' %>>Supervisor</option>
-                                <option value="Admin" <%= roleFilter === 'Admin' ? 'selected' : '' %>>Admin</option>
+                                <option value="4" <%= roleFilter === '4' ? 'selected' : '' %>>Counter/Intake Officer</option>
+                                <option value="3" <%= roleFilter === '3' ? 'selected' : '' %>>Investigating Officer</option>
+                                <option value="2" <%= roleFilter === '2' ? 'selected' : '' %>>Station Commander</option>
+                                <option value="1" <%= roleFilter === '1' ? 'selected' : '' %>>Admin</option>
                             </select>
                         </div>
                         <div class="col-12 col-md-2 d-grid">

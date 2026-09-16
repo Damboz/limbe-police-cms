@@ -13,8 +13,12 @@ exports.isAuthenticated = (req, res, next) => {
 
 
 exports.isAdmin = (req, res, next) => {
-    if (req.session && req.session.user && req.session.user.role === 'Admin') {
-        return next();
+    if (req.session && req.session.user) {
+        const role = String(req.session.user.role || '').toLowerCase();
+        const roleId = req.session.user.role_id;
+        if (role === 'admin' || roleId === 1) {
+            return next();
+        }
     }
     return res.status(403).render('errors/403', {
         title: '403 Forbidden | Limbe Police CMS',
@@ -37,6 +41,19 @@ exports.authorizeRoles = (...allowedRoles) => {
         const normalizedAllowedRoles = allowedRoles.map(role => String(role).toUpperCase());
 
         if (normalizedAllowedRoles.includes(userRole)) {
+            return next();
+        }
+
+        const roleIdMap = {
+            1: ['ADMIN'],
+            2: ['STATION COMMANDER'],
+            3: ['INVESTIGATING OFFICER'],
+            4: ['COUNTER/INTAKE OFFICER']
+        };
+
+        const roleId = Number(req.session.user.role_id);
+        const roleIdAliases = roleIdMap[roleId] || [];
+        if (roleIdAliases.some(alias => normalizedAllowedRoles.includes(alias))) {
             return next();
         }
 

@@ -1,0 +1,151 @@
+<%- include('../partials/header') %>
+
+<div class="app-wrapper">
+    <%- include('../partials/sidebar') %>
+
+    <div class="main-content">
+        <%- include('../partials/topbar') %>
+
+        <div class="container-fluid py-4">
+
+            <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+                <div>
+                    <h4 class="fw-bold mb-1" style="color: var(--mps-navy);">
+                        <i class="bi bi-search me-2 text-warning"></i>Smart Search
+                    </h4>
+                    <p class="text-muted small mb-0">Quick lookup by National ID, phone number, suspect name, or victim name.</p>
+                </div>
+                <a href="/dashboard" class="btn btn-outline-navy btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                </a>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-navy text-white py-3">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-search me-2 text-warning"></i>Search Criteria
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="/cases/search" class="row g-3 align-items-end">
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted fw-semibold">Search Query</label>
+                            <input type="text" name="q" value="<%= query %>" class="form-control" 
+                                   placeholder="Enter National ID, phone number, suspect name, or victim name..." 
+                                   minlength="2" autofocus>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted fw-semibold">Search Type</label>
+                            <select name="type" class="form-select">
+                                <option value="all" <%= searchType === 'all' ? 'selected' : '' %>>All Types</option>
+                                <option value="national_id" <%= searchType === 'national_id' ? 'selected' : '' %>>National ID (Complainant)</option>
+                                <option value="phone" <%= searchType === 'phone' ? 'selected' : '' %>>Phone Number</option>
+                                <option value="suspect" <%= searchType === 'suspect' ? 'selected' : '' %>>Suspect Name/ID</option>
+                                <option value="victim" <%= searchType === 'victim' ? 'selected' : '' %>>Victim Name/ID</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-navy w-100">
+                                <i class="bi bi-search me-1"></i>Search
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <% if (query && query.length >= 2) { %>
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-navy text-white d-flex align-items-center justify-content-between py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="bi bi-list-check me-2 text-warning"></i>Search Results
+                        </h6>
+                        <span class="badge bg-gold text-dark"><%= results.length %> Match(es)</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>OB Number</th>
+                                    <th>Match Type</th>
+                                    <th>Name / Details</th>
+                                    <th>Category</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (results.length === 0) { %>
+                                    <tr>
+                                        <td colspan="8" class="text-center py-5 text-muted">
+                                            <i class="bi bi-search fs-2 d-block mb-2"></i>
+                                            No records found matching "<strong><%= query %></strong>".
+                                            <br><small>Try a different search term or broaden the search type.</small>
+                                        </td>
+                                    </tr>
+                                <% } else { %>
+                                    <% results.forEach(item => { %>
+                                        <tr>
+                                            <td class="fw-bold font-monospace" style="color: var(--mps-navy);">
+                                                <%= item.ob_number %>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark border"><%= item.match_type %></span>
+                                            </td>
+                                            <td class="small fw-semibold">
+                                                <%= item.complainant_name %>
+                                                <% if (item.suspect_name) { %>
+                                                    <div class="text-muted" style="font-size: 0.75rem;">Suspect: <%= item.suspect_name %></div>
+                                                <% } %>
+                                                <% if (item.victim_name) { %>
+                                                    <div class="text-muted" style="font-size: 0.75rem;">Victim: <%= item.victim_name %></div>
+                                                <% } %>
+                                            </td>
+                                            <td class="small"><%= item.crime_category || '—' %></td>
+                                            <td>
+                                                <% if (item.priority === 'Critical') { %>
+                                                    <span class="badge badge-priority-critical">CRITICAL</span>
+                                                <% } else if (item.priority === 'High') { %>
+                                                    <span class="badge badge-priority-high">HIGH</span>
+                                                <% } else if (item.priority === 'Medium') { %>
+                                                    <span class="badge badge-priority-medium">MEDIUM</span>
+                                                <% } else { %>
+                                                    <span class="badge badge-priority-low">LOW</span>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <% if (item.status === 'Closed') { %>
+                                                    <span class="badge badge-case-closed">Closed</span>
+                                                <% } else if (item.status === 'Under Investigation') { %>
+                                                    <span class="badge badge-case-investigation">Under Investigation</span>
+                                                <% } else if (item.status === 'Court Pending') { %>
+                                                    <span class="badge badge-case-open">Court Pending</span>
+                                                <% } else { %>
+                                                    <span class="badge bg-light text-dark border"><%= item.status %></span>
+                                                <% } %>
+                                            </td>
+                                            <td class="small text-muted"><%= new Date(item.created_at).toLocaleDateString() %></td>
+                                            <td class="text-end">
+                                                <a href="/cases/<%= item.id %>" class="btn btn-sm btn-outline-navy">
+                                                    <i class="bi bi-eye-fill me-1"></i>View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <% } else if (query && query.length < 2) { %>
+                <div class="alert alert-warning small">
+                    <i class="bi bi-info-circle me-2"></i>Please enter at least 2 characters to search.
+                </div>
+            <% } %>
+
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>

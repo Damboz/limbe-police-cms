@@ -2,6 +2,10 @@ const db = require('../config/db');
 
 const OVERDUE_DAYS_THRESHOLD = 14;
 
+const getClientIp = (req) => {
+    return req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || null;
+};
+
 
 exports.getDashboard = async (req, res, next) => {
     try {
@@ -118,7 +122,8 @@ exports.getCaseDetail = async (req, res, next) => {
         `, [id]);
 
         const [suspects] = await db.execute(`
-            SELECT s.id, s.first_name, s.last_name, s.alias, s.national_id, s.photo_url, cs.status AS link_status, cs.arrest_date
+            SELECT s.id, s.first_name, s.last_name, s.alias, s.national_id, s.photo_url,
+                   s.phone_number, cs.status AS link_status, cs.arrest_date
             FROM case_suspects cs
             JOIN suspects s ON cs.suspect_id = s.id
             WHERE cs.case_id = ?
@@ -133,12 +138,13 @@ exports.getCaseDetail = async (req, res, next) => {
 
         const isAssignedInvestigator = user.role === 'Investigating Officer' && caseItem.assigned_officer_id === user.id;
         const isIntakeOfficer = user.role === 'Counter/Intake Officer';
+        const isSupervisor = ['Station Commander', 'Admin'].includes(user.role);
 
         const permissions = {
             canAddNote: isAssignedInvestigator,
             canRequestStatus: isAssignedInvestigator && !caseItem.requested_status && caseItem.status === 'Under Investigation',
             canAddEvidence: isAssignedInvestigator,
-            canLinkSuspectVictim: isAssignedInvestigator || isIntakeOfficer
+            canLinkSuspectVictim: isAssignedInvestigator || isIntakeOfficer || isSupervisor
         };
 
         res.render('cases/detail', {
@@ -183,8 +189,8 @@ exports.addCaseNote = async (req, res, next) => {
         );
 
         await db.execute(
-            'INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)',
-            [user.id, 'CASE_NOTE_ADDED', `Added investigation note to Case ID ${id}.`]
+            'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+            [user.id, 'CASE_NOTE_ADDED', `Added investigation note to Case ID ${id}.`, getClientIp(req)]
         );
 
         req.flash('success', 'Investigation note added.');
@@ -233,8 +239,8 @@ exports.requestStatusChange = async (req, res, next) => {
         );
 
         await db.execute(
-            'INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)',
-            [user.id, 'STATUS_CHANGE_REQUESTED', `Requested status change to "${requested_status}" for Case ID ${id}.`]
+            'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+            [user.id, 'STATUS_CHANGE_REQUESTED', `Requested status change to "${requested_status}" for Case ID ${id}.`, getClientIp(req)]
         );
 
         req.flash('success', 'Status change request submitted for supervisor review.');
@@ -273,8 +279,8 @@ exports.addEvidence = async (req, res, next) => {
         );
 
         await db.execute(
-            'INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)',
-            [user.id, 'EVIDENCE_LOGGED', `Logged evidence item "${item_number}" for Case ID ${id}.`]
+            'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+            [user.id, 'EVIDENCE_LOGGED', `Logged evidence item "${item_number}" for Case ID ${id}.`, getClientIp(req)]
         );
 
         req.flash('success', 'Evidence item logged successfully.');
@@ -303,7 +309,7 @@ exports.linkSuspect = async (req, res, next) => {
         }
 
         const allowed = (user.role === 'Investigating Officer' && caseRows[0].assigned_officer_id === user.id)
-            || user.role === 'Counter/Intake Officer';
+            || ['Counter/Intake Officer', 'Station Commander', 'Admin'].includes(user.role);
         if (!allowed) {
             req.flash('error', 'You do not have permission to link suspects to this case.');
             return res.redirect(`/cases/${id}`);
@@ -321,8 +327,8 @@ exports.linkSuspect = async (req, res, next) => {
         );
 
         await db.execute(
-            'INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)',
-            [user.id, 'SUSPECT_LINKED', `Linked suspect "${first_name} ${last_name}" to Case ID ${id}.`]
+            'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+            [user.id, 'SUSPECT_LINKED', `Linked suspect "${first_name} ${last_name}" to Case ID ${id}.`, getClientIp(req)]
         );
 
         req.flash('success', 'Suspect linked to case successfully.');
@@ -351,7 +357,7 @@ exports.linkVictim = async (req, res, next) => {
         }
 
         const allowed = (user.role === 'Investigating Officer' && caseRows[0].assigned_officer_id === user.id)
-            || user.role === 'Counter/Intake Officer';
+            || ['Counter/Intake Officer', 'Station Commander', 'Admin'].includes(user.role);
         if (!allowed) {
             req.flash('error', 'You do not have permission to link victims to this case.');
             return res.redirect(`/cases/${id}`);
@@ -364,8 +370,8 @@ exports.linkVictim = async (req, res, next) => {
         );
 
         await db.execute(
-            'INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)',
-            [user.id, 'VICTIM_LINKED', `Linked victim "${full_name}" to Case ID ${id}.`]
+            'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+            [user.id, 'VICTIM_LINKED', `Linked victim "${full_name}" to Case ID ${id}.`, getClientIp(req)]
         );
 
         req.flash('success', 'Victim information added to case.');

@@ -102,7 +102,7 @@
 
                 <div class="col-12 col-lg-8 col-xl-9 order-lg-2">
                     <div class="row g-3 mb-4">
-                        <div class="col-12 col-sm-6">
+                        <div class="col-12 col-sm-6 col-xl-3">
                             <div class="card border-0 shadow-sm p-3">
                                 <div class="metric-card">
                                     <div>
@@ -113,7 +113,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-12 col-sm-6">
+                        <div class="col-12 col-sm-6 col-xl-3">
                             <div class="card border-0 shadow-sm p-3">
                                 <div class="metric-card">
                                     <div>
@@ -124,18 +124,40 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-12 col-sm-6">
+                        <div class="col-12 col-sm-6 col-xl-3">
                             <div class="card border-0 shadow-sm p-3">
                                 <div class="metric-card">
                                     <div>
-                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Released</span>
-                                        <h3 class="fw-bold mb-0" style="color: var(--mps-success);"><%= kpi.released %></h3>
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Transferred to Lab</span>
+                                        <h3 class="fw-bold mb-0" style="color: var(--mps-blue);"><%= kpi.transferred %></h3>
+                                    </div>
+                                    <div class="metric-icon blue"><i class="bi bi-truck"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="card border-0 shadow-sm p-3">
+                                <div class="metric-card">
+                                    <div>
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">In Court</span>
+                                        <h3 class="fw-bold mb-0" style="color: var(--mps-info);"><%= kpi.inCourt %></h3>
+                                    </div>
+                                    <div class="metric-icon navy"><i class="bi bi-gavel"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="card border-0 shadow-sm p-3">
+                                <div class="metric-card">
+                                    <div>
+                                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Returned / Disposed</span>
+                                        <h3 class="fw-bold mb-0" style="color: var(--mps-success);"><%= kpi.returned + kpi.disposed %></h3>
                                     </div>
                                     <div class="metric-icon success"><i class="bi bi-box-arrow-up-right"></i></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-12 col-sm-6">
+                        <div class="col-12 col-sm-6 col-xl-3">
                             <div class="card border-0 shadow-sm p-3">
                                 <div class="metric-card">
                                     <div>
@@ -179,10 +201,10 @@
                             <% } else { %>
                                 <% const statusColors = {
                                     'In Locker': { bg: 'rgba(234, 88, 12, 0.15)', color: 'rgb(194, 65, 12)' },
-                                    'Released': { bg: 'rgba(22, 163, 74, 0.15)', color: 'rgb(21, 128, 61)' },
-                                    'Transferred': { bg: 'rgba(37, 99, 235, 0.15)', color: 'rgb(29, 78, 216)' },
+                                    'Transferred to Lab': { bg: 'rgba(37, 99, 235, 0.15)', color: 'rgb(29, 78, 216)' },
+                                    'Presented in Court': { bg: 'rgba(147, 51, 234, 0.15)', color: 'rgb(126, 34, 206)' },
                                     'Returned': { bg: 'rgba(100, 116, 139, 0.15)', color: 'rgb(71, 85, 105)' },
-                                    'Destroyed': { bg: 'rgba(220, 38, 38, 0.15)', color: 'rgb(185, 28, 28)' }
+                                    'Disposed': { bg: 'rgba(220, 38, 38, 0.15)', color: 'rgb(185, 28, 28)' }
                                 }; %>
                                 <% evidenceItems.forEach(item => { %>
                                     <tr>
@@ -220,9 +242,59 @@
                                             <span class="badge fw-semibold" style="background-color: <%= sc.bg %>; color: <%= sc.color %>;"><%= st %></span>
                                         </td>
                                         <td class="text-end">
-                                            <a href="/cases/<%= item.case_id %>" class="btn btn-outline-navy btn-sm">
-                                                <i class="bi bi-eye me-1"></i>View Case
-                                            </a>
+                                            <% if (canUpdateStatus && item.status !== 'Disposed') { %>
+                                                <div class="d-flex gap-1 justify-content-end flex-wrap">
+                                                    <form method="POST" action="/evidence/<%= item.id %>/status" class="d-inline">
+                                                        <input type="hidden" name="new_status" value="Presented in Court">
+                                                        <button type="submit" class="btn btn-outline-navy btn-sm" title="Mark as presented in court" onclick="return confirm('Mark this item as Presented in Court?');">
+                                                            <i class="bi bi-gavel"></i>
+                                                        </button>
+                                                    </form>
+                                                    <form method="POST" action="/evidence/<%= item.id %>/transfer" class="d-inline">
+                                                        <input type="hidden" name="transfer_to" value="Forensic Lab">
+                                                        <button type="submit" class="btn btn-outline-navy btn-sm" title="Transfer to Forensic Lab" onclick="return confirm('Transfer this item to the Forensic Lab?');">
+                                                            <i class="bi bi-truck"></i>
+                                                        </button>
+                                                    </form>
+                                                    <form method="POST" action="/evidence/<%= item.id %>/status" class="d-inline">
+                                                        <input type="hidden" name="new_status" value="Returned">
+                                                        <button type="submit" class="btn btn-outline-navy btn-sm" title="Mark as returned" onclick="return confirm('Mark this item as Returned?');">
+                                                            <i class="bi bi-box-arrow-left"></i>
+                                                        </button>
+                                                    </form>
+                                                    <button type="button" class="btn btn-outline-danger btn-sm" title="Dispose" data-bs-toggle="modal" data-bs-target="#disposeModal<%= item.id %>">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+
+                                                <div class="modal fade" id="disposeModal<%= item.id %>" tabindex="-1" aria-hidden="true">
+                                                    <div class="modal-dialog modal-dialog-centered">
+                                                        <div class="modal-content">
+                                                            <form method="POST" action="/evidence/<%= item.id %>/dispose">
+                                                                <div class="modal-header bg-danger text-white">
+                                                                    <h6 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-1"></i>Dispose Evidence Item <%= item.item_number %></h6>
+                                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                                </div>
+                                                                <div class="modal-body text-start">
+                                                                    <p class="small text-muted mb-3">Disposal is a permanent, audited action. Provide a reason for the audit trail.</p>
+                                                                    <label class="form-label small fw-semibold">Disposal Reason <span class="text-danger">*</span></label>
+                                                                    <textarea name="disposal_reason" class="form-control" rows="2" required placeholder="e.g. Court order, returned to owner then registered, no evidentiary value..."></textarea>
+                                                                </div>
+                                                                <div class="modal-footer">
+                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Permanently dispose this evidence item? This cannot be undone.');">
+                                                                        <i class="bi bi-trash-fill me-1"></i>Confirm Disposal
+                                                                    </button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <% } else { %>
+                                                <a href="/cases/<%= item.case_id %>" class="btn btn-outline-navy btn-sm">
+                                                    <i class="bi bi-eye me-1"></i>View Case
+                                                </a>
+                                            <% } %>
                                         </td>
                                     </tr>
                                 <% }) %>

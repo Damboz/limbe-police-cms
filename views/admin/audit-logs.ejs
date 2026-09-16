@@ -8,8 +8,7 @@
 
         <div class="container-fluid py-4">
             
-            
-            <div class="d-flex align-items-center justify-content-between mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
                 <div>
                     <h4 class="fw-bold mb-1" style="color: var(--mps-navy);">
                         <i class="bi bi-journal-text me-2 text-warning"></i>System Security & Audit Trail Logs
@@ -18,12 +17,63 @@
                 </div>
             </div>
 
-            
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-navy text-white py-3">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-funnel-fill me-2 text-warning"></i>Filter Audit Logs
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="/admin/audit-logs" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted fw-semibold mb-1">Search</label>
+                            <input type="text" name="search" value="<%= filters.search %>" class="form-control form-control-sm" 
+                                   placeholder="Search details, badge number, name...">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted fw-semibold mb-1">Action Type</label>
+                            <select name="action" class="form-select form-select-sm">
+                                <option value="">All Actions</option>
+                                <% actionTypes.forEach(a => { %>
+                                    <option value="<%= a %>" <%= filters.action === a ? 'selected' : '' %>><%= a %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted fw-semibold mb-1">User Role</label>
+                            <select name="role" class="form-select form-select-sm">
+                                <option value="">All Roles</option>
+                                <% roleTypes.forEach(r => { %>
+                                    <option value="<%= r %>" <%= filters.role === r ? 'selected' : '' %>><%= r %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted fw-semibold mb-1">From Date</label>
+                            <input type="date" name="date_from" value="<%= filters.date_from %>" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted fw-semibold mb-1">To Date</label>
+                            <input type="date" name="date_to" value="<%= filters.date_to %>" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-1 d-flex gap-1">
+                            <button type="submit" class="btn btn-navy btn-sm flex-grow-1">
+                                <i class="bi bi-search"></i>
+                            </button>
+                            <a href="/admin/audit-logs" class="btn btn-outline-navy btn-sm flex-grow-1">
+                                <i class="bi bi-x-lg"></i>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-dark text-white d-flex align-items-center justify-content-between py-3">
                     <h6 class="mb-0 fw-bold">
-                        <i class="bi bi-shield-shaded me-2"></i>Recorded Audit Events (Last 100 Entries)
+                        <i class="bi bi-shield-shaded me-2"></i>Audit Trail Records
                     </h6>
+                    <span class="badge bg-secondary"><%= logs.length %> Entries</span>
                 </div>
                 
                 <div class="table-responsive">
@@ -36,14 +86,15 @@
                                 <th>Assigned Role</th>
                                 <th>Action Type</th>
                                 <th>Details</th>
+                                <th>IP Address</th>
                             </tr>
                         </thead>
                         <tbody>
                             <% if (!logs || logs.length === 0) { %>
                                 <tr>
-                                    <td colspan="6" class="text-center py-4 text-muted">
+                                    <td colspan="7" class="text-center py-4 text-muted">
                                         <i class="bi bi-shield-check fs-3 d-block mb-2"></i>
-                                        No audit trail logs recorded in the system.
+                                        No audit trail logs match your filter criteria.
                                     </td>
                                 </tr>
                             <% } else { %>
@@ -71,13 +122,42 @@
                                                 <span class="badge bg-secondary">USER_LOGOUT</span>
                                             <% } else if (log.action === 'USER_CREATED') { %>
                                                 <span class="badge bg-primary">USER_CREATED</span>
+                                            <% } else if (log.action === 'USER_UPDATED') { %>
+                                                <span class="badge bg-info">USER_UPDATED</span>
+                                            <% } else if (log.action === 'PASSWORD_RESET') { %>
+                                                <span class="badge bg-warning text-dark">PASSWORD_RESET</span>
+                                            <% } else if (log.action === 'STATUS_CHANGE') { %>
+                                                <span class="badge bg-warning text-dark">STATUS_CHANGE</span>
+                                            <% } else if (log.action === 'CASE_REGISTERED') { %>
+                                                <span class="badge bg-primary">CASE_REGISTERED</span>
+                                            <% } else if (log.action === 'CASE_ASSIGNED' || log.action === 'CASE_REASSIGNED') { %>
+                                                <span class="badge bg-info"><%= log.action %></span>
+                                            <% } else if (log.action === 'CASE_NOTE_ADDED') { %>
+                                                <span class="badge bg-secondary">CASE_NOTE_ADDED</span>
+                                            <% } else if (log.action === 'STATUS_CHANGE_REQUESTED') { %>
+                                                <span class="badge bg-warning text-dark">STATUS_CHANGE_REQUESTED</span>
+                                            <% } else if (log.action.startsWith('STATUS_APPROVAL')) { %>
+                                                <span class="badge bg-dark"><%= log.action %></span>
+                                            <% } else if (log.action === 'EVIDENCE_LOGGED') { %>
+                                                <span class="badge bg-success">EVIDENCE_LOGGED</span>
+                                            <% } else if (log.action === 'EVIDENCE_STATUS_CHANGED') { %>
+                                                <span class="badge bg-info">EVIDENCE_STATUS_CHANGED</span>
+                                            <% } else if (log.action === 'EVIDENCE_TRANSFERRED') { %>
+                                                <span class="badge bg-primary">EVIDENCE_TRANSFERRED</span>
+                                            <% } else if (log.action === 'EVIDENCE_DISPOSED') { %>
+                                                <span class="badge bg-danger">EVIDENCE_DISPOSED</span>
+                                            <% } else if (log.action === 'SUSPECT_LINKED') { %>
+                                                <span class="badge bg-secondary">SUSPECT_LINKED</span>
+                                            <% } else if (log.action === 'VICTIM_LINKED') { %>
+                                                <span class="badge bg-secondary">VICTIM_LINKED</span>
                                             <% } else if (log.action === 'STATUS_CHANGE') { %>
                                                 <span class="badge bg-warning text-dark">STATUS_CHANGE</span>
                                             <% } else { %>
                                                 <span class="badge bg-dark"><%= log.action %></span>
                                             <% } %>
                                         </td>
-                                        <td class="small text-secondary"><%= log.details %></td>
+                                        <td class="small text-secondary" style="max-width: 350px; word-wrap: break-word;"><%= log.details %></td>
+                                        <td class="small font-monospace text-muted"><%= log.ip_address || '—' %></td>
                                     </tr>
                                 <% }); %>
                             <% } %>

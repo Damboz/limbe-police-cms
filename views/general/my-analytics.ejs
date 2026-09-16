@@ -1,0 +1,191 @@
+<%- include('../partials/header') %>
+
+<div class="app-wrapper">
+    <%- include('../partials/sidebar') %>
+
+    <div class="main-content">
+        <%- include('../partials/topbar') %>
+
+        <div class="container-fluid py-4">
+
+            <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+                <div>
+                    <h4 class="fw-bold mb-1" style="color: var(--mps-navy);">
+                        <i class="bi bi-graph-up-arrow me-2 text-warning"></i>My Case Analytics
+                    </h4>
+                    <p class="text-muted small mb-0">
+                        <% if (isInvestigator) { %>
+                            Trends and metrics for the cases assigned to you.
+                        <% } else { %>
+                            Trends and metrics for the cases you registered at the intake desk.
+                        <% } %>
+                    </p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="/reports/my-cases" class="btn btn-navy btn-sm">
+                        <i class="bi bi-file-earmark-arrow-down me-1"></i>Export PDF Report
+                    </a>
+                    <a href="/dashboard" class="btn btn-outline-navy btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm p-3">
+                        <div class="metric-card">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Total Cases</span>
+                                <h3 class="fw-bold mb-0" style="color: var(--mps-navy);"><%= metrics.totalCases %></h3>
+                            </div>
+                            <div class="metric-icon navy"><i class="bi bi-folder-fill"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm p-3">
+                        <div class="metric-card">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Closed</span>
+                                <h3 class="fw-bold mb-0 text-success"><%= metrics.closedCases %></h3>
+                            </div>
+                            <div class="metric-icon success"><i class="bi bi-check-circle-fill"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm p-3">
+                        <div class="metric-card">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Resolution Rate</span>
+                                <h3 class="fw-bold mb-0" style="color: var(--mps-info);"><%= metrics.resolutionRate %>%</h3>
+                            </div>
+                            <div class="metric-icon blue"><i class="bi bi-graph-ups"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm p-3">
+                        <div class="metric-card">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Pending Requests</span>
+                                <h3 class="fw-bold mb-0" style="color: var(--mps-warning);"><%= metrics.pendingRequests %></h3>
+                            </div>
+                            <div class="metric-icon warning"><i class="bi bi-hourglass-split"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-navy text-white py-3">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart-line me-2 text-warning"></i>Monthly Trend</h6>
+                        </div>
+                        <div class="card-body">
+                            <% if (monthlyTrends.length === 0) { %>
+                                <p class="text-muted small mb-0">No trend data available yet.</p>
+                            <% } else { %>
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>Month</th>
+                                            <th class="text-center">Cases</th>
+                                            <th class="text-center">High / Critical</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% monthlyTrends.forEach(m => { %>
+                                            <tr>
+                                                <td class="small fw-semibold"><%= m.month_label %></td>
+                                                <td class="text-center"><span class="badge bg-navy"><%= m.total_cases %></span></td>
+                                                <td class="text-center">
+                                                    <span class="badge <%= m.severe_cases > 0 ? 'badge-priority-critical' : 'bg-light text-dark border' %>"><%= m.severe_cases %></span>
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    </tbody>
+                                </table>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-navy text-white py-3">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart-fill me-2 text-warning"></i>Status Distribution</h6>
+                        </div>
+                        <div class="card-body">
+                            <% if (statusDistribution.length === 0) { %>
+                                <p class="text-muted small mb-0">No cases on record.</p>
+                            <% } else { %>
+                                <% statusDistribution.forEach(s => { %>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="small fw-semibold"><%= s.status %></span>
+                                        <span class="badge bg-light text-dark border"><%= s.total_count %></span>
+                                    </div>
+                                <% }) %>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-navy text-white py-3">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-diagram-3 me-2 text-warning"></i>Category Breakdown</h6>
+                        </div>
+                        <div class="card-body">
+                            <% if (categoryBreakdown.length === 0) { %>
+                                <p class="text-muted small mb-0">No category data available.</p>
+                            <% } else { %>
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>Crime Category</th>
+                                            <th class="text-center">Cases</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% categoryBreakdown.forEach(c => { %>
+                                            <tr>
+                                                <td class="small fw-semibold"><%= c.crime_category %></td>
+                                                <td class="text-center"><span class="badge bg-navy"><%= c.total_incidents %></span></td>
+                                            </tr>
+                                        <% }) %>
+                                    </tbody>
+                                </table>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-navy text-white py-3">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-geo-alt-fill me-2 text-warning"></i>Your Incident Locations</h6>
+                        </div>
+                        <div class="card-body">
+                            <% if (hotspots.length === 0) { %>
+                                <p class="text-muted small mb-0">No location data available.</p>
+                            <% } else { %>
+                                <% hotspots.forEach((h, i) => { %>
+                                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                        <span class="small fw-semibold"><%= i + 1 %>. <%= h.location %></span>
+                                        <span class="badge bg-light text-dark border"><%= h.incident_count %></span>
+                                    </div>
+                                <% }) %>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>

@@ -2,6 +2,11 @@ const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 
 
+const getClientIp = (req) => {
+    return req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || null;
+};
+
+
 exports.getLogin = (req, res) => {
     if (req.session && req.session.user) {
         const role = (req.session.user.role || '').toLowerCase();
@@ -88,8 +93,8 @@ exports.postLogin = async (req, res, next) => {
         };
 
         await db.execute(
-            'INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)',
-            [user.id, 'USER_LOGIN', `Officer ${user.badge_number} logged in successfully.`]
+            'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+            [user.id, 'USER_LOGIN', `Officer ${user.badge_number} logged in successfully.`, getClientIp(req)]
         );
 
 
@@ -119,8 +124,8 @@ exports.logout = async (req, res) => {
 
         try {
             await db.execute(
-                'INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)',
-                [userId, 'USER_LOGOUT', `Officer ${badgeNumber} logged out.`]
+                'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+                [userId, 'USER_LOGOUT', `Officer ${badgeNumber} logged out.`, getClientIp(req)]
             );
         } catch (err) {
             console.error('Failed to log audit entry for logout:', err);
@@ -205,8 +210,8 @@ exports.postChangePassword = async (req, res, next) => {
         await db.execute('UPDATE users SET password_hash = ? WHERE id = ?', [hashedNewPassword, userId]);
 
         await db.execute(
-            'INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)',
-            [userId, 'PASSWORD_CHANGED', `Officer ${user.badge_number} updated their password.`]
+            'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+            [userId, 'PASSWORD_CHANGED', `Officer ${user.badge_number} updated their password.`, getClientIp(req)]
         );
 
         res.render('auth/change-password', {

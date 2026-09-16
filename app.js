@@ -39,7 +39,9 @@ const adminRoutes = require('./routes/adminRoutes');
 const supervisorRoutes = require('./routes/supervisorRoutes');
 const caseRoutes = require('./routes/caseRoutes');
 const evidenceRoutes = require('./routes/evidenceRoutes');
+const reportsController = require('./controllers/reportsController');
 const generalController = require('./controllers/generalController');
+const { isAuthenticated, authorizeRoles } = require('./middleware/authMiddleware');
 
 
 
@@ -79,16 +81,6 @@ app.use((req, res, next) => {
 });
 
 
-const isAuthenticated = (req, res, next) => {
-    if (req.session && req.session.user) {
-        return next();
-    }
-    res.redirect('/auth/login');
-};
-
-
-
-
 app.get('/', (req, res) => {
     if (req.session && req.session.user) {
         return res.redirect('/dashboard');
@@ -122,6 +114,17 @@ app.use('/admin', adminRoutes);
 app.use('/supervisor', supervisorRoutes);
 app.use('/cases', caseRoutes);
 app.use('/evidence', evidenceRoutes);
+
+app.get('/reports/my-cases',
+    isAuthenticated,
+    authorizeRoles('Investigating Officer', 'Station Commander', 'Admin'),
+    reportsController.exportMyCasesPDF
+);
+app.get('/reports/analytics',
+    isAuthenticated,
+    authorizeRoles('Investigating Officer', 'Counter/Intake Officer'),
+    reportsController.getMyAnalytics
+);
 
 
 app.get('/api/health', (req, res) => {

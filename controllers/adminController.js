@@ -2,6 +2,11 @@ const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 
 
+const getClientIp = (req) => {
+    return req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || null;
+};
+
+
 const getRoleMapping = (roleInput) => {
     const input = (roleInput || '').toString().toLowerCase().trim();
 
@@ -28,6 +33,24 @@ exports.getAdminDashboard = async (req, res, next) => {
         const [[{ activeUsers }]] = await db.execute('SELECT COUNT(*) AS activeUsers FROM users WHERE is_active = 1');
         const [[{ totalLogins }]] = await db.execute('SELECT COUNT(*) AS totalLogins FROM audit_logs WHERE action = "USER_LOGIN"');
 
+        const [[caseStats]] = await db.execute(`
+            SELECT 
+                COUNT(*) AS totalCases,
+                SUM(CASE WHEN status = 'Reported' THEN 1 ELSE 0 END) AS reportedCount,
+                SUM(CASE WHEN status = 'Under Investigation' THEN 1 ELSE 0 END) AS underInvestigation,
+                SUM(CASE WHEN status = 'Closed' THEN 1 ELSE 0 END) AS closedCount,
+                SUM(CASE WHEN status = 'Court Pending' THEN 1 ELSE 0 END) AS courtPending,
+                SUM(CASE WHEN assigned_officer_id IS NULL THEN 1 ELSE 0 END) AS unassignedCount
+            FROM cases
+        `);
+
+        const [[evidenceStats]] = await db.execute(`
+            SELECT 
+                COUNT(*) AS totalEvidence,
+                SUM(CASE WHEN status = 'In Locker' THEN 1 ELSE 0 END) AS inLocker,
+                SUM(CASE WHEN status = 'Disposed' THEN 1 ELSE 0 END) AS disposed
+            FROM evidence
+        `);
 
         const [users] = await db.execute(`
             SELECT id, badge_number, rank_title, first_name, last_name, email, role, role_id, is_active 
@@ -47,6 +70,19 @@ exports.getAdminDashboard = async (req, res, next) => {
         res.render('admin/dashboard', {
             title: 'Admin Dashboard | Limbe Police CMS',
             stats: { totalUsers, activeUsers, totalLogins },
+            caseStats: {
+                totalCases: caseStats.totalCases || 0,
+                reported: caseStats.reportedCount || 0,
+                underInvestigation: caseStats.underInvestigation || 0,
+                closed: caseStats.closedCount || 0,
+                courtPending: caseStats.courtPending || 0,
+                unassigned: caseStats.unassignedCount || 0
+            },
+            evidenceStats: {
+                totalEvidence: evidenceStats.totalEvidence || 0,
+                inLocker: evidenceStats.inLocker || 0,
+                disposed: evidenceStats.disposed || 0
+            },
             users,
             recentLogs,
             success: req.flash ? req.flash('success') : null,
@@ -74,8 +110,8 @@ exports.getUsers = async (req, res, next) => {
         let params = [search, search, search, search];
 
         if (roleFilter) {
-            query += ` AND (u.role = ? OR u.role_id = ?)`;
-            params.push(roleFilter, roleFilter);
+            query += ` AND u.role_id = ?`;
+            params.push(roleFilter);
         }
 
         query += ` ORDER BY u.created_at DESC`;
@@ -173,8 +209,8 @@ exports.postCreateUser = async (req, res, next) => {
         const adminId = (req.session && req.session.user) ? req.session.user.id : (req.user ? req.user.id : null);
 
         await db.execute(
-            'INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)',
-            [adminId, 'USER_CREATED', `Created user ${badge_number.trim()} with role ${roleMap.role} (Role ID: ${roleMap.role_id})`]
+            'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+            [adminId, 'USER_CREATED', `Created user ${badge_number.trim()} with role ${roleMap.role} (Role ID: ${roleMap.role_id})`, getClientIp(req)]
         );
 
         if (req.flash) {
@@ -261,8 +297,8 @@ exports.postEditUser = async (req, res, next) => {
         const adminId = (req.session && req.session.user) ? req.session.user.id : (req.user ? req.user.id : null);
 
         await db.execute(
-            'INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)',
-            [adminId, 'USER_UPDATED', `Updated details for User ID ${userId} (${first_name} ${last_name}). Assigned Role: ${roleMap.role}`]
+            'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+            [adminId, 'USER_UPDATED', `Updated details for User ID ${userId} (${first_name} ${last_name}). Assigned Role: ${roleMap.role}`, getClientIp(req)]
         );
 
         if (req.flash) {
@@ -301,8 +337,8 @@ exports.postResetPassword = async (req, res, next) => {
         const adminId = (req.session && req.session.user) ? req.session.user.id : (req.user ? req.user.id : null);
 
         await db.execute(
-            'INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)',
-            [adminId, 'PASSWORD_RESET', `Admin reset password for User ID ${userId}`]
+            'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+            [adminId, 'PASSWORD_RESET', `Admin reset password for User ID ${userId}`, getClientIp(req)]
         );
 
         if (req.flash) {
@@ -338,8 +374,8 @@ exports.toggleUserStatus = async (req, res, next) => {
         await db.execute('UPDATE users SET is_active = ? WHERE id = ?', [newStatus, userId]);
 
         await db.execute(
-            'INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)',
-            [currentUserId, 'STATUS_CHANGE', `Toggled status for ${users[0].badge_number} to ${newStatus ? 'Active' : 'Inactive'}`]
+            'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+            [currentUserId, 'STATUS_CHANGE', `Toggled status for ${users[0].badge_number} to ${newStatus ? 'Active' : 'Inactive'}`, getClientIp(req)]
         );
 
         if (req.flash) {
@@ -355,17 +391,67 @@ exports.toggleUserStatus = async (req, res, next) => {
 
 exports.getAuditLogs = async (req, res, next) => {
     try {
+        const search = req.query.search ? `%${req.query.search.trim()}%` : '';
+        const actionFilter = req.query.action || '';
+        const roleFilter = req.query.role || '';
+        const dateFrom = req.query.date_from || '';
+        const dateTo = req.query.date_to || '';
+
+        let conditions = ['1=1'];
+        let params = [];
+
+        if (search) {
+            conditions.push('(a.details LIKE ? OR u.badge_number LIKE ? OR u.first_name LIKE ? OR u.last_name LIKE ?)');
+            params.push(search, search, search, search);
+        }
+        if (actionFilter) {
+            conditions.push('a.action = ?');
+            params.push(actionFilter);
+        }
+        if (roleFilter) {
+            conditions.push('u.role = ?');
+            params.push(roleFilter);
+        }
+        if (dateFrom) {
+            conditions.push('DATE(a.created_at) >= ?');
+            params.push(dateFrom);
+        }
+        if (dateTo) {
+            conditions.push('DATE(a.created_at) <= ?');
+            params.push(dateTo);
+        }
+
+        const whereClause = conditions.join(' AND ');
+
         const [logs] = await db.execute(`
             SELECT a.*, u.badge_number, u.rank_title, u.first_name, u.last_name, u.role
             FROM audit_logs a
             LEFT JOIN users u ON a.user_id = u.id
+            WHERE ${whereClause}
             ORDER BY a.created_at DESC
-            LIMIT 100
+            LIMIT 500
+        `, params);
+
+        const [actionTypes] = await db.execute(`
+            SELECT DISTINCT action FROM audit_logs ORDER BY action ASC
+        `);
+
+        const [roleTypes] = await db.execute(`
+            SELECT DISTINCT role FROM users WHERE role IS NOT NULL ORDER BY role ASC
         `);
 
         res.render('admin/audit-logs', {
             title: 'Audit Logs | Limbe Police CMS',
-            logs
+            logs,
+            actionTypes: actionTypes.map(r => r.action),
+            roleTypes: roleTypes.map(r => r.role),
+            filters: {
+                search: req.query.search || '',
+                action: actionFilter,
+                role: roleFilter,
+                date_from: dateFrom,
+                date_to: dateTo
+            }
         });
     } catch (err) {
         next(err);

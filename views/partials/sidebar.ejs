@@ -1,7 +1,12 @@
 <% 
   const activeUser = locals.currentUser || (locals.session ? locals.session.user : null); 
   const currentPath = locals.currentPath || ''; 
-  const role = activeUser ? activeUser.role : '';
+  const role = activeUser ? (activeUser.role || '').toLowerCase() : '';
+  const roleId = activeUser ? Number(activeUser.role_id) : null;
+  const isInvestigator = role === 'investigating officer' || role === 'investigator' || roleId === 3;
+  const isCommander = role === 'station commander' || role === 'supervisor' || roleId === 2;
+  const isAdmin = role === 'admin' || roleId === 1;
+  const isIntake = role === 'counter/intake officer' || role === 'officer' || roleId === 4;
 %>
 
 <aside class="sidebar">
@@ -38,8 +43,17 @@
             </a>
         </li>
 
+        <% if (isIntake) { %>
+            <li>
+                <a href="/cases/search" class="sidebar-link <%= currentPath === '/cases/search' ? 'active' : '' %>">
+                    <i class="bi bi-search"></i>
+                    <span>Smart Search</span>
+                </a>
+            </li>
+        <% } %>
+
         
-        <% if (role === 'Investigating Officer' || role === 'Station Commander') { %>
+        <% if (isInvestigator || isCommander || isAdmin) { %>
             <li>
                 <a href="/evidence" class="sidebar-link <%= currentPath.startsWith('/evidence') ? 'active' : '' %>">
                     <i class="bi bi-box-seam"></i>
@@ -49,40 +63,62 @@
         <% } %>
 
         
-        <% if (role === 'Station Commander' || role === 'Admin') { %>
-            <li class="sidebar-heading mt-3">Command & Oversight</li>
+        <% if (isCommander || isAdmin || isInvestigator || isIntake) { %>
+            <li class="sidebar-heading mt-3">Analytics & Reports</li>
 
-            <li>
-                <a href="/supervisor/analytics" class="sidebar-link <%= currentPath.startsWith('/supervisor/analytics') ? 'active' : '' %>">
-                    <i class="bi bi-graph-up-arrow"></i>
-                    <span>Analytics & Hotspots</span>
-                </a>
-            </li>
+            <% if (isCommander || isAdmin) { %>
+                <li>
+                    <a href="/supervisor/analytics" class="sidebar-link <%= currentPath.startsWith('/supervisor/analytics') ? 'active' : '' %>">
+                        <i class="bi bi-graph-up-arrow"></i>
+                        <span>Analytics & Hotspots</span>
+                    </a>
+                </li>
+            <% } %>
 
-            <li>
-                <a href="/supervisor/reports/station-performance" class="sidebar-link">
-                    <i class="bi bi-file-earmark-bar-graph"></i>
-                    <span>Station Performance PDF</span>
-                </a>
-            </li>
+            <% if (isInvestigator || isIntake) { %>
+                <li>
+                    <a href="/reports/analytics" class="sidebar-link <%= currentPath.startsWith('/reports/analytics') ? 'active' : '' %>">
+                        <i class="bi bi-graph-up-arrow"></i>
+                        <span>My Analytics</span>
+                    </a>
+                </li>
+            <% } %>
 
-            <li>
-                <a href="/supervisor/reports/crime-statistics" class="sidebar-link">
-                    <i class="bi bi-file-earmark-text"></i>
-                    <span>Crime Statistics PDF</span>
-                </a>
-            </li>
+            <% if (isInvestigator) { %>
+                <li>
+                    <a href="/reports/my-cases" class="sidebar-link <%= currentPath.startsWith('/reports/my-cases') ? 'active' : '' %>">
+                        <i class="bi bi-file-earmark-person"></i>
+                        <span>My Case Report</span>
+                    </a>
+                </li>
+            <% } %>
 
-            <li>
-                <a href="/supervisor/reports/officer-productivity" class="sidebar-link">
-                    <i class="bi bi-file-earmark-person"></i>
-                    <span>Officer Productivity PDF</span>
-                </a>
-            </li>
+            <% if (isCommander || isAdmin) { %>
+                <li>
+                    <a href="/supervisor/reports/station-performance" class="sidebar-link">
+                        <i class="bi bi-file-earmark-bar-graph"></i>
+                        <span>Station Performance PDF</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/supervisor/reports/crime-statistics" class="sidebar-link">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>Crime Statistics PDF</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/supervisor/reports/officer-productivity" class="sidebar-link">
+                        <i class="bi bi-file-earmark-person"></i>
+                        <span>Officer Productivity PDF</span>
+                    </a>
+                </li>
+            <% } %>
         <% } %>
 
         
-        <% if (role === 'Admin') { %>
+        <% if (isAdmin) { %>
             <li class="sidebar-heading mt-3">Administration</li>
             
             <li>

@@ -300,8 +300,20 @@
                                                 <%= s.first_name %> <%= s.last_name %>
                                                 <% if (s.alias) { %><span class="text-muted">"<%= s.alias %>"</span><% } %>
                                             </div>
-                                            <div class="small text-muted"><%= s.link_status %></div>
+                                            <div class="small text-muted">
+                                                <%= s.link_status %><% if (s.national_id) { %> &middot; National ID: <%= s.national_id %><% } %>
+                                            </div>
                                         </div>
+                                        <button type="button"
+                                                class="btn btn-warning btn-sm fw-semibold"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#invitationModal"
+                                                data-case-id="<%= caseItem.id %>"
+                                                data-suspect-id="<%= s.id %>"
+                                                data-suspect="<%= s.first_name %> <%= s.last_name %>"
+                                                data-phone="<%= s.phone_number || '' %>">
+                                            <i class="bi bi-envelope-paper me-1"></i>Invitation Letter
+                                        </button>
                                     </div>
                                 <% }) %>
                             <% } %>
@@ -366,5 +378,98 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="invitationModal" tabindex="-1" aria-labelledby="invitationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="invitationForm" method="POST" target="_blank" action="">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold" id="invitationModalLabel">
+                        <i class="bi bi-envelope-paper me-2"></i>Generate Suspect Invitation Letter
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3 text-muted small">
+                        Issue a formal invitation letter requiring the suspect to report to Limbe Police Station.
+                        The letter will include the case details (OB reference, offence, and incident narrative).
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Suspect</label>
+                        <input type="text" id="invSuspectDisplay" class="form-control" readonly disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label for="invAppearanceDate" class="form-label fw-semibold">Date of Appearance <span class="text-danger">*</span></label>
+                        <input type="date" name="appearance_date" id="invAppearanceDate" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="invAppearanceTime" class="form-label fw-semibold">Time of Appearance</label>
+                        <input type="time" name="appearance_time" id="invAppearanceTime" class="form-control" value="09:00">
+                        <div class="form-text">Leave as 09:00 if no specific time agreed.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="invNotes" class="form-label fw-semibold">Officer Remarks / Items to Bring (Optional)</label>
+                        <textarea name="officer_notes" id="invNotes" rows="3" class="form-control"
+                                  placeholder="e.g. Please bring your National ID and any documents related to the matter."></textarea>
+                    </div>
+                    <div class="form-check form-switch border rounded p-3 mb-3 bg-light">
+                        <input class="form-check-input" type="checkbox" name="send_sms" id="invSendSms" value="on">
+                        <label class="form-check-label fw-semibold" for="invSendSms">
+                            <i class="bi bi-chat-dots me-1 text-success"></i>Deliver as SMS to the suspect
+                        </label>
+                        <div class="form-text" id="invSmsPhoneHint">Sent to the suspect's phone on file at the time of generation.</div>
+                    </div>
+                    <div class="alert alert-secondary small py-2 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        The letter is saved to the audit log, an SMS record is kept for tracking, and a copy is returned as a PDF.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning btn-sm fw-bold">
+                        <i class="bi bi-download me-1"></i>Generate PDF
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const invitationModal = document.getElementById('invitationModal');
+        const dateInput = document.getElementById('invAppearanceDate');
+
+        const setMinDate = () => {
+            const today = new Date();
+            today.setDate(today.getDate() + 3);
+            dateInput.min = today.toISOString().split('T')[0];
+            if (!dateInput.value || new Date(dateInput.value) < today) {
+                dateInput.value = today.toISOString().split('T')[0];
+            }
+        };
+
+        invitationModal.addEventListener('show.bs.modal', function (event) {
+            const btn = event.relatedTarget;
+            const form = document.getElementById('invitationForm');
+            form.action = `/cases/${btn.dataset.caseId}/suspects/${btn.dataset.suspectId}/letter`;
+            document.getElementById('invSuspectDisplay').value = btn.dataset.suspect;
+
+            const smsToggle = document.getElementById('invSendSms');
+            const smsHint = document.getElementById('invSmsPhoneHint');
+            const phone = (btn.dataset.phone || '').trim();
+            if (phone) {
+                smsToggle.disabled = false;
+                smsHint.textContent = `Sent to ${phone} at the time of generation.`;
+            } else {
+                smsToggle.checked = false;
+                smsToggle.disabled = true;
+                smsHint.textContent = 'No phone number on file for this suspect — add one before sending by SMS.';
+            }
+
+            setMinDate();
+        });
+    });
+</script>
 
 <%- include('../partials/footer') %>

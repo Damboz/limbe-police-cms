@@ -88,6 +88,45 @@
 
             
             <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-navy text-white py-3">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-clipboard-data me-2 text-warning"></i>Case & Evidence Overview
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="p-3 rounded" style="background: rgba(2, 116, 176, 0.06); border: 1px solid rgba(2, 116, 176, 0.15);">
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Total Cases</span>
+                                <h4 class="fw-bold mb-1" style="color: var(--mps-navy);"><%= caseStats.totalCases %></h4>
+                                <small class="text-muted"><%= caseStats.reported %> reported &middot; <%= caseStats.unassigned %> unassigned</small>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="p-3 rounded" style="background: rgba(13, 202, 240, 0.06); border: 1px solid rgba(13, 202, 240, 0.15);">
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Under Investigation</span>
+                                <h4 class="fw-bold mb-1" style="color: var(--mps-info);"><%= caseStats.underInvestigation %></h4>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="p-3 rounded" style="background: rgba(111, 168, 220, 0.06); border: 1px solid rgba(111, 168, 220, 0.15);">
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Court Pending</span>
+                                <h4 class="fw-bold mb-1" style="color: var(--mps-blue);"><%= caseStats.courtPending %></h4>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="p-3 rounded" style="background: rgba(22, 163, 74, 0.06); border: 1px solid rgba(22, 163, 74, 0.15);">
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Closed Cases</span>
+                                <h4 class="fw-bold mb-1 text-success"><%= caseStats.closed %></h4>
+                                <small class="text-muted"><%= evidenceStats.totalEvidence %> evidence items &middot; <%= evidenceStats.inLocker %> in locker</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-navy text-white d-flex align-items-center justify-content-between py-3">
                     <h6 class="mb-0 fw-bold">
                         <i class="bi bi-person-gear me-2 text-warning"></i>Recent Personnel & Quick Actions

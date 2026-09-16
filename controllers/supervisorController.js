@@ -4,6 +4,10 @@ const PDFDocument = require('pdfkit');
 
 const OVERDUE_DAYS_THRESHOLD = 14;
 
+const getClientIp = (req) => {
+    return req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || null;
+};
+
 
 exports.getDashboard = async (req, res, next) => {
     try {
@@ -112,6 +116,12 @@ exports.assignCase = async (req, res, next) => {
     try {
         const { case_id, investigator_id, notes } = req.body;
         const supervisorId = req.session?.user?.id;
+        const callerRole = req.session?.user?.role || '';
+
+        if (!['Station Commander', 'supervisor'].includes(callerRole)) {
+            req.flash('error', 'Only Station Commanders can assign cases to investigators.');
+            return res.redirect('/supervisor/dashboard');
+        }
 
         if (!case_id || !investigator_id) {
             req.flash('error', 'Please select both a valid case and an investigator.');
@@ -150,11 +160,12 @@ exports.assignCase = async (req, res, next) => {
 
 
         await db.execute(
-            `INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)`,
+            `INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)`,
             [
                 supervisorId,
                 isReassignment ? 'CASE_REASSIGNED' : 'CASE_ASSIGNED',
-                `${isReassignment ? 'Reassigned' : 'Assigned'} Case ID ${case_id} to Investigator ${inv[0].rank_title} ${inv[0].last_name} (${inv[0].badge_number}). ${notes ? 'Note: ' + notes : ''}`
+                `${isReassignment ? 'Reassigned' : 'Assigned'} Case ID ${case_id} to Investigator ${inv[0].rank_title} ${inv[0].last_name} (${inv[0].badge_number}). ${notes ? 'Note: ' + notes : ''}`,
+                getClientIp(req)
             ]
         );
 
@@ -170,6 +181,12 @@ exports.processStatusApproval = async (req, res, next) => {
     try {
         const { case_id, decision, supervisor_notes } = req.body;
         const supervisorId = req.session?.user?.id;
+        const callerRole = req.session?.user?.role || '';
+
+        if (!['Station Commander', 'supervisor'].includes(callerRole)) {
+            req.flash('error', 'Only Station Commanders can approve or reject status change requests.');
+            return res.redirect('/supervisor/dashboard');
+        }
 
         if (!['APPROVE', 'REJECT'].includes(decision)) {
             req.flash('error', 'Invalid decision provided.');
@@ -195,11 +212,12 @@ exports.processStatusApproval = async (req, res, next) => {
         );
 
         await db.execute(
-            'INSERT INTO audit_logs (user_id, action, details) VALUES (?, ?, ?)',
+            'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
             [
                 supervisorId,
                 `STATUS_APPROVAL_${decision}`,
-                `Supervisor ${decision}D status change request for Case OB ${currentCase.ob_number}. New status: ${targetStatus}. ${supervisor_notes ? 'Notes: ' + supervisor_notes : ''}`
+                `Supervisor ${decision}D status change request for Case OB ${currentCase.ob_number}. New status: ${targetStatus}. ${supervisor_notes ? 'Notes: ' + supervisor_notes : ''}`,
+                getClientIp(req)
             ]
         );
 
