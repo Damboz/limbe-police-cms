@@ -40,7 +40,7 @@ exports.getAdminDashboard = async (req, res, next) => {
                 SUM(CASE WHEN status = 'Under Investigation' THEN 1 ELSE 0 END) AS underInvestigation,
                 SUM(CASE WHEN status = 'Closed' THEN 1 ELSE 0 END) AS closedCount,
                 SUM(CASE WHEN status = 'Court Pending' THEN 1 ELSE 0 END) AS courtPending,
-                SUM(CASE WHEN assigned_officer_id IS NULL THEN 1 ELSE 0 END) AS unassignedCount
+                SUM(CASE WHEN NOT EXISTS (SELECT 1 FROM case_investigators ci WHERE ci.case_id = cases.id) THEN 1 ELSE 0 END) AS unassignedCount
             FROM cases
         `);
 

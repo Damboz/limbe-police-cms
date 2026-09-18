@@ -76,8 +76,17 @@
                             <span class="fw-semibold"><%= caseItem.unit_name %></span>
                         </div>
                         <div class="col-md-3">
-                            <span class="text-muted small text-uppercase fw-semibold d-block">Assigned Investigator</span>
-                            <span class="fw-semibold"><%= caseItem.assigned_officer_name || 'Unassigned' %></span>
+                            <span class="text-muted small text-uppercase fw-semibold d-block">Assigned Investigator(s)</span>
+                            <% if (assignedInvestigatorNames.length === 0) { %>
+                                <span class="fw-semibold">Unassigned</span>
+                            <% } else { %>
+                                <% assignedInvestigatorNames.forEach((name, idx) => { %>
+                                    <span class="fw-semibold d-block">
+                                        <%= name %>
+                                        <% if (idx === 0) { %><span class="badge bg-light text-dark border ms-1">Lead</span><% } %>
+                                    </span>
+                                <% }) %>
+                            <% } %>
                         </div>
                         <div class="col-md-3">
                             <span class="text-muted small text-uppercase fw-semibold d-block">Intake Officer</span>

@@ -142,7 +142,6 @@ CREATE TABLE `cases` (
   `incident_location`   varchar(255) NOT NULL,
   `incident_details`    text NOT NULL,
   `intake_officer_id`   int NOT NULL,
-  `assigned_officer_id` int DEFAULT NULL,
   `status`              enum('Reported','Under Investigation','Court Pending','Closed','Archived') DEFAULT 'Reported',
   `requested_status`    enum('Closed','Court Pending') DEFAULT NULL,
   `status_request_notes` text,
@@ -155,7 +154,6 @@ CREATE TABLE `cases` (
   KEY `category_id` (`category_id`),
   KEY `unit_id` (`unit_id`),
   KEY `intake_officer_id` (`intake_officer_id`),
-  KEY `assigned_officer_id` (`assigned_officer_id`),
   KEY `idx_ob_number` (`ob_number`),
   KEY `idx_case_status` (`status`),
   KEY `fk_case_status_requested_by` (`status_requested_by`),
@@ -163,14 +161,35 @@ CREATE TABLE `cases` (
   CONSTRAINT `cases_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `crime_categories` (`id`),
   CONSTRAINT `cases_ibfk_2` FOREIGN KEY (`unit_id`) REFERENCES `station_units` (`id`),
   CONSTRAINT `cases_ibfk_3` FOREIGN KEY (`intake_officer_id`) REFERENCES `users` (`id`),
-  CONSTRAINT `cases_ibfk_4` FOREIGN KEY (`assigned_officer_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_case_status_requested_by` FOREIGN KEY (`status_requested_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `cases` (`id`, `ob_number`, `complainant_name`, `complainant_id_number`, `complainant_phone`, `complainant_address`, `complainant_gender`, `category_id`, `unit_id`, `priority`, `incident_datetime`, `incident_location`, `incident_details`, `intake_officer_id`, `assigned_officer_id`, `status`, `requested_status`, `status_request_notes`, `status_requested_by`, `status_requested_at`, `created_at`, `updated_at`) VALUES
-(1, 'OB-20260816-0001', 'George Dambo',    NULL,       '0996697165', 'Lumbadzi, Lilongwe Malawi', 'Male', 5, 3, 'Medium', '2025-03-21 12:00:00', 'Chichiri',            'mdjmsmskakamd',                          6,  8,  'Under Investigation', NULL, NULL, NULL, NULL, '2026-08-16 14:30:27', '2026-08-19 09:33:04'),
-(2, 'OB-20260905-0001', 'Patrick Magule',  '004939939', '08840399483', 'Lumbadzi, Lilongwe Malawi', 'Male', 6, 2, 'High',   '2026-09-05 11:45:00', 'Zingwangwa Market',   'fjjkfkdjsKLKAJGJDKSKFHSJKSKKKSHFHFH',   9,  NULL, 'Reported',           NULL, NULL, NULL, NULL, '2026-09-05 09:45:58', '2026-09-16 16:02:53'),
-(3, 'OB-20260905-0002', 'George Dambo',    'pfoodld',  '0996697165', 'Lumbadzi, Lilongwe Malawi', 'Male', 7, 3, 'Medium', '2026-09-03 12:42:00', 'oflsllsld',           'kqalL;;dlszmmdk',                        2, 26,  'Under Investigation', 'Closed', 'gdjjs', 26, '2026-09-16 16:40:50', '2026-09-05 10:43:05', '2026-09-16 16:40:50');
+INSERT INTO `cases` (`id`, `ob_number`, `complainant_name`, `complainant_id_number`, `complainant_phone`, `complainant_address`, `complainant_gender`, `category_id`, `unit_id`, `priority`, `incident_datetime`, `incident_location`, `incident_details`, `intake_officer_id`, `status`, `requested_status`, `status_request_notes`, `status_requested_by`, `status_requested_at`, `created_at`, `updated_at`) VALUES
+(1, 'OB-20260816-0001', 'George Dambo',    NULL,       '0996697165', 'Lumbadzi, Lilongwe Malawi', 'Male', 5, 3, 'Medium', '2025-03-21 12:00:00', 'Chichiri',            'mdjmsmskakamd',                          6,  'Under Investigation', NULL, NULL, NULL, NULL, '2026-08-16 14:30:27', '2026-08-19 09:33:04'),
+(2, 'OB-20260905-0001', 'Patrick Magule',  '004939939', '08840399483', 'Lumbadzi, Lilongwe Malawi', 'Male', 6, 2, 'High',   '2026-09-05 11:45:00', 'Zingwangwa Market',   'fjjkfkdjsKLKAJGJDKSKFHSJKSKKKSHFHFH',   9,  'Reported',           NULL, NULL, NULL, NULL, '2026-09-05 09:45:58', '2026-09-16 16:02:53'),
+(3, 'OB-20260905-0002', 'George Dambo',    'pfoodld',  '0996697165', 'Lumbadzi, Lilongwe Malawi', 'Male', 7, 3, 'Medium', '2026-09-03 12:42:00', 'oflsllsld',           'kqalL;;dlszmmdk',                        2,  'Under Investigation', 'Closed', 'gdjjs', 26, '2026-09-16 16:40:50', '2026-09-05 10:43:05', '2026-09-16 16:40:50');
+
+-- Case <> Investigators (many-to-many)
+DROP TABLE IF EXISTS `case_investigators`;
+CREATE TABLE `case_investigators` (
+  `id`              int NOT NULL AUTO_INCREMENT,
+  `case_id`         int NOT NULL,
+  `investigator_id` int NOT NULL,
+  `assigned_by`     int DEFAULT NULL,
+  `assigned_at`     timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_lead`         tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_case_investigator` (`case_id`,`investigator_id`),
+  KEY `investigator_id` (`investigator_id`),
+  KEY `assigned_by` (`assigned_by`),
+  CONSTRAINT `ci_ibfk_1` FOREIGN KEY (`case_id`)         REFERENCES `cases` (`id`)  ON DELETE CASCADE,
+  CONSTRAINT `ci_ibfk_2` FOREIGN KEY (`investigator_id`) REFERENCES `users` (`id`)  ON DELETE CASCADE,
+  CONSTRAINT `ci_ibfk_3` FOREIGN KEY (`assigned_by`)     REFERENCES `users` (`id`)  ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `case_investigators` (`id`, `case_id`, `investigator_id`, `assigned_by`, `assigned_at`, `is_lead`) VALUES
+(1, 1, 8,  6,  '2026-08-19 09:33:04', 1),
+(2, 3, 26, 12, '2026-09-16 16:36:55', 1);
 
 -- Suspects
 DROP TABLE IF EXISTS `suspects`;

@@ -6,6 +6,14 @@ const API_USER   = process.env.SMS_API_USER || '';
 const FROM       = process.env.SMS_FROM || '';
 const ENABLED    = (process.env.SMS_ENABLED || 'true') === 'true';
 
+const AIRTEL_BASE_URL    = (process.env.AIRTEL_BASE_URL || 'https://openapiuat.airtel.mw').replace(/\/+$/, '');
+const AIRTEL_CLIENT_ID   = process.env.AIRTEL_CLIENT_ID || '';
+const AIRTEL_CLIENT_SECRET = process.env.AIRTEL_CLIENT_SECRET || '';
+const AIRTEL_PARTNER_CODE = process.env.AIRTEL_PARTNER_CODE || '';
+const AIRTEL_COUNTRY     = process.env.AIRTEL_COUNTRY || 'MW';
+
+let airtelToken = { value: null, expiresAt: 0 };
+
 function normalizeMalawiPhone(raw) {
     let digits = (raw || '').replace(/\D/g, '');
     if (digits.startsWith('0')) digits = '265' + digits.slice(1);
@@ -57,6 +65,71 @@ async function sendWithAfricaTalking(phone, message) {
 }
 
 
+function normalizeAirtelMsisdn(raw) {
+    let digits = (raw || '').replace(/\D/g, '');
+    if (digits.startsWith('265')) digits = digits.slice(3);
+    if (digits.startsWith('0')) digits = digits.slice(1);
+    return digits.slice(0, 9);
+}
+
+
+async function getAirtelToken() {
+    if (airtelToken.value && airtelToken.expiresAt > Date.now() + 60000) {
+        return airtelToken.value;
+    }
+
+    const res = await fetch(`${AIRTEL_BASE_URL}/auth/oauth2/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': '*/*' },
+        body: JSON.stringify({
+            client_id: AIRTEL_CLIENT_ID,
+            client_secret: AIRTEL_CLIENT_SECRET,
+            grant_type: 'client_credentials'
+        })
+    });
+
+    const json = await res.json().catch(() => ({}));
+
+    if (!res.ok || !json.access_token) {
+        throw new Error(json.error_description || json.error || json.msg || `Airtel token request failed (HTTP ${res.status})`);
+    }
+
+    airtelToken = {
+        value: json.access_token,
+        expiresAt: Date.now() + (parseInt(json.expires_in, 10) || 3600) * 1000
+    };
+    return airtelToken.value;
+}
+
+
+async function sendWithAirtelNotify(phone, message) {
+    const token = await getAirtelToken();
+
+    const res = await fetch(`${AIRTEL_BASE_URL}/arch-in/web/callback/loans/notify/${encodeURIComponent(AIRTEL_PARTNER_CODE)}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': '*/*',
+            'x-country': AIRTEL_COUNTRY,
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            partnerCode: AIRTEL_PARTNER_CODE,
+            customerMsisdn: normalizeAirtelMsisdn(phone),
+            message: { en: message }
+        })
+    });
+
+    const json = await res.json().catch(() => ({}));
+
+    if (res.ok && json.st === true) {
+        return { ok: true, providerResponse: json };
+    }
+
+    return { ok: false, error: json.msg || json.devErrorMsg || `Airtel notify failed (HTTP ${res.status})`, providerResponse: json };
+}
+
+
 exports.sendInvitationSms = async function sendInvitationSms(phone, {
     obNumber, suspectName, crimeCategory, incidentLocation,
     incidentDate, incidentDetails, appearanceDate, appearanceTime, officerNotes
@@ -87,23 +160,26 @@ exports.sendInvitationSms = async function sendInvitationSms(phone, {
         `Contact: Desk Officer, Limbe Police Station`
     ].join('\n');
 
-    const credsConfigured = API_KEY && API_USER
-        && !API_KEY.startsWith('your_')
-        && !API_USER.startsWith('your_');
+    const credsConfigured = PROVIDER === 'airtel'
+        ? !!(AIRTEL_CLIENT_ID && AIRTEL_CLIENT_SECRET && AIRTEL_PARTNER_CODE)
+            && !AIRTEL_CLIENT_ID.startsWith('your_')
+        : !!(API_KEY && API_USER && !API_KEY.startsWith('your_') && !API_USER.startsWith('your_'));
 
     if (!credsConfigured) {
-        await logSms(normalized, message, 'QUEUED', PROVIDER || 'console', null);
+        await logSms(normalized, message, 'QUEUED', PROVIDER || 'console', { reason: 'provider credentials not configured' });
         console.log(`[SMS QUEUED — no provider configured]\n  To: ${normalized}\n  ${message.replace(/\n/g, '\n  ')}\n`);
         return { ok: true, queued: true, phone: normalized, message };
     }
 
     try {
-        const result = await sendWithAfricaTalking(normalized, message);
+        const result = PROVIDER === 'airtel'
+            ? await sendWithAirtelNotify(normalized, message)
+            : await sendWithAfricaTalking(normalized, message);
         const status = result.ok ? 'SENT' : 'FAILED';
-        await logSms(normalized, message, status, 'africastalking', result.providerResponse || result.error);
+        await logSms(normalized, message, status, PROVIDER, result);
         return { ok: result.ok, phone: normalized, message, error: result.error };
     } catch (err) {
-        await logSms(normalized, message, 'FAILED', PROVIDER || 'africastalking', { error: err.message });
+        await logSms(normalized, message, 'FAILED', PROVIDER, { error: err.message });
         return { ok: false, phone: normalized, message, error: err.message };
     }
 };

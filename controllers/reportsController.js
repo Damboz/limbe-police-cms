@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const PDFDocument = require('pdfkit');
 const smsService = require('../services/smsService');
+const { isAssignedInvestigator } = require('../services/assignmentService');
 
 
 function formatDisplayDate(dateStr) {
@@ -55,7 +56,8 @@ exports.generateSuspectInvitation = async (req, res, next) => {
             return res.redirect(`/cases/${id}`);
         }
 
-        const allowed = (user.role === 'Investigating Officer' && caseItem.assigned_officer_id === user.id)
+        const isAssigned = await isAssignedInvestigator(id, user.id);
+        const allowed = (user.role === 'Investigating Officer' && isAssigned)
             || ['Counter/Intake Officer', 'Station Commander', 'Admin'].includes(user.role);
         if (!allowed) {
             req.flash('error', 'You do not have permission to generate a letter for this case.');
@@ -227,7 +229,7 @@ exports.exportMyCasesPDF = async (req, res, next) => {
                 SELECT c.*, cc.name AS crime_category
                 FROM cases c
                 LEFT JOIN crime_categories cc ON c.category_id = cc.id
-                WHERE c.assigned_officer_id = ?
+                WHERE c.id IN (SELECT ci.case_id FROM case_investigators ci WHERE ci.investigator_id = ?)
                 ORDER BY c.created_at DESC
             `;
             params = [user.id];
@@ -305,7 +307,7 @@ exports.getMyAnalytics = async (req, res, next) => {
         const isInvestigator = user.role === 'Investigating Officer';
 
         const whereClause = isInvestigator
-            ? 'WHERE c.assigned_officer_id = ?'
+            ? 'WHERE c.id IN (SELECT ci.case_id FROM case_investigators ci WHERE ci.investigator_id = ?)'
             : 'WHERE c.intake_officer_id = ?';
         const params = [user.id];
 

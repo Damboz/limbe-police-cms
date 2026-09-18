@@ -22,38 +22,35 @@ exports.getCaseList = async (req, res, next) => {
         let query;
         let params = [];
 
-        if (role === 'Investigating Officer') {
-            query = `
+        const baseSelect = `
                 SELECT 
                     c.id, c.ob_number, c.complainant_name, c.priority, c.status, c.created_at,
                     cc.name AS crime_category,
                     su.name AS unit_name,
                     CONCAT(intake.rank_title, ' ', intake.first_name, ' ', intake.last_name) AS intake_officer_name,
-                    assigned.id AS assigned_officer_id,
-                    CONCAT(assigned.rank_title, ' ', assigned.first_name, ' ', assigned.last_name) AS assigned_officer_name
+                    GROUP_CONCAT(DISTINCT CONCAT(assigned.rank_title, ' ', assigned.first_name, ' ', assigned.last_name)
+                        ORDER BY ci.is_lead DESC, assigned.last_name SEPARATOR ', ') AS assigned_officer_name,
+                    COUNT(DISTINCT ci.investigator_id) AS investigator_count
                 FROM cases c
                 LEFT JOIN crime_categories cc ON c.category_id = cc.id
                 LEFT JOIN station_units su ON c.unit_id = su.id
                 LEFT JOIN users intake ON c.intake_officer_id = intake.id
-                LEFT JOIN users assigned ON c.assigned_officer_id = assigned.id
-                WHERE c.assigned_officer_id = ?
+                LEFT JOIN case_investigators ci ON c.id = ci.case_id
+                LEFT JOIN users assigned ON ci.investigator_id = assigned.id
+            `;
+
+        if (role === 'Investigating Officer') {
+            query = `
+                ${baseSelect}
+                WHERE c.id IN (SELECT DISTINCT case_id FROM case_investigators WHERE investigator_id = ?)
+                GROUP BY c.id
                 ORDER BY c.created_at DESC
             `;
             params = [user.id];
         } else {
             query = `
-                SELECT 
-                    c.id, c.ob_number, c.complainant_name, c.priority, c.status, c.created_at,
-                    cc.name AS crime_category,
-                    su.name AS unit_name,
-                    CONCAT(intake.rank_title, ' ', intake.first_name, ' ', intake.last_name) AS intake_officer_name,
-                    assigned.id AS assigned_officer_id,
-                    CONCAT(assigned.rank_title, ' ', assigned.first_name, ' ', assigned.last_name) AS assigned_officer_name
-                FROM cases c
-                LEFT JOIN crime_categories cc ON c.category_id = cc.id
-                LEFT JOIN station_units su ON c.unit_id = su.id
-                LEFT JOIN users intake ON c.intake_officer_id = intake.id
-                LEFT JOIN users assigned ON c.assigned_officer_id = assigned.id
+                ${baseSelect}
+                GROUP BY c.id
                 ORDER BY c.created_at DESC
             `;
         }

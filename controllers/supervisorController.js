@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const PDFDocument = require('pdfkit');
+const { syncCaseInvestigators } = require('../services/assignmentService');
 
 
 const OVERDUE_DAYS_THRESHOLD = 14;
@@ -12,13 +13,13 @@ const getClientIp = (req) => {
 exports.getDashboard = async (req, res, next) => {
     try {
 
-        const [[kpiCounts]] = await db.execute(`
+const [[kpiCounts]] = await db.execute(`
             SELECT 
-                SUM(CASE WHEN assigned_officer_id IS NULL AND status != 'Closed' THEN 1 ELSE 0 END) AS unassignedCount,
-                SUM(CASE WHEN requested_status IS NOT NULL THEN 1 ELSE 0 END) AS pendingApprovalsCount,
-                SUM(CASE WHEN status = 'Under Investigation' THEN 1 ELSE 0 END) AS activeCasesCount,
-                SUM(CASE WHEN status = 'Under Investigation' AND DATEDIFF(CURDATE(), created_at) > ${OVERDUE_DAYS_THRESHOLD} THEN 1 ELSE 0 END) AS overdueCount
-            FROM cases
+                SUM(CASE WHEN NOT EXISTS (SELECT 1 FROM case_investigators ci WHERE ci.case_id = c.id) AND c.status != 'Closed' THEN 1 ELSE 0 END) AS unassignedCount,
+                SUM(CASE WHEN c.requested_status IS NOT NULL THEN 1 ELSE 0 END) AS pendingApprovalsCount,
+                SUM(CASE WHEN c.status = 'Under Investigation' THEN 1 ELSE 0 END) AS activeCasesCount,
+                SUM(CASE WHEN c.status = 'Under Investigation' AND DATEDIFF(CURDATE(), c.created_at) > ${OVERDUE_DAYS_THRESHOLD} THEN 1 ELSE 0 END) AS overdueCount
+            FROM cases c
         `);
 
 
@@ -34,7 +35,8 @@ exports.getDashboard = async (req, res, next) => {
             FROM cases c
             LEFT JOIN crime_categories cc ON c.category_id = cc.id
             LEFT JOIN users u ON c.intake_officer_id = u.id
-            WHERE c.assigned_officer_id IS NULL AND c.status != 'Closed'
+            WHERE NOT EXISTS (SELECT 1 FROM case_investigators ci WHERE ci.case_id = c.id)
+              AND c.status != 'Closed'
             ORDER BY FIELD(c.priority, 'Critical', 'High', 'Medium', 'Low'), c.created_at ASC
             LIMIT 10
         `);
@@ -50,7 +52,8 @@ exports.getDashboard = async (req, res, next) => {
                 c.status_requested_at,
                 CONCAT(inv.rank_title, ' ', inv.last_name) AS investigator_name
             FROM cases c
-            LEFT JOIN users inv ON c.assigned_officer_id = inv.id
+            LEFT JOIN case_investigators cil ON c.id = cil.case_id AND cil.is_lead = 1
+            LEFT JOIN users inv ON cil.investigator_id = inv.id
             WHERE c.requested_status IS NOT NULL
             ORDER BY c.status_requested_at ASC
         `);
@@ -63,9 +66,10 @@ exports.getDashboard = async (req, res, next) => {
                 u.rank_title, 
                 u.first_name, 
                 u.last_name,
-                COUNT(c.id) AS active_case_count
+                COUNT(DISTINCT c.id) AS active_case_count
             FROM users u
-            LEFT JOIN cases c ON u.id = c.assigned_officer_id AND c.status = 'Under Investigation'
+            LEFT JOIN case_investigators ci ON u.id = ci.investigator_id
+            LEFT JOIN cases c ON ci.case_id = c.id AND c.status = 'Under Investigation'
             WHERE u.role IN ('Investigating Officer', 'investigator') AND u.is_active = 1
             GROUP BY u.id
             ORDER BY active_case_count ASC
@@ -82,12 +86,15 @@ exports.getDashboard = async (req, res, next) => {
                 c.status, 
                 c.created_at,
                 DATEDIFF(CURDATE(), c.created_at) AS days_open,
-                inv.id AS investigator_id,
-                CONCAT(inv.rank_title, ' ', inv.first_name, ' ', inv.last_name) AS investigator_name
+                GROUP_CONCAT(DISTINCT inv.id ORDER BY ci.is_lead DESC, inv.last_name) AS investigator_ids,
+                GROUP_CONCAT(DISTINCT CONCAT(inv.rank_title, ' ', inv.first_name, ' ', inv.last_name)
+                    ORDER BY ci.is_lead DESC, inv.last_name SEPARATOR ', ') AS investigator_names
             FROM cases c
             LEFT JOIN crime_categories cc ON c.category_id = cc.id
-            LEFT JOIN users inv ON c.assigned_officer_id = inv.id
-            WHERE c.assigned_officer_id IS NOT NULL AND c.status NOT IN ('Closed', 'Archived')
+            JOIN case_investigators ci ON c.id = ci.case_id
+            LEFT JOIN users inv ON ci.investigator_id = inv.id
+            WHERE c.status NOT IN ('Closed', 'Archived')
+            GROUP BY c.id
             ORDER BY days_open DESC
             LIMIT 15
         `);
@@ -114,7 +121,7 @@ exports.getDashboard = async (req, res, next) => {
 
 exports.assignCase = async (req, res, next) => {
     try {
-        const { case_id, investigator_id, notes } = req.body;
+        const { case_id, investigator_ids, notes } = req.body;
         const supervisorId = req.session?.user?.id;
         const callerRole = req.session?.user?.role || '';
 
@@ -123,53 +130,62 @@ exports.assignCase = async (req, res, next) => {
             return res.redirect('/supervisor/dashboard');
         }
 
-        if (!case_id || !investigator_id) {
-            req.flash('error', 'Please select both a valid case and an investigator.');
+        const rawIds = Array.isArray(investigator_ids) ? investigator_ids : (investigator_ids ? [investigator_ids] : []);
+        const investigatorIds = [...new Set(rawIds.map(v => String(v)).filter(Boolean))];
+
+        if (!case_id || investigatorIds.length === 0) {
+            req.flash('error', 'Please select a valid case and at least one investigator.');
             return res.redirect('/supervisor/dashboard');
         }
 
-
+        const placeholders = investigatorIds.map(() => '?').join(',');
         const [inv] = await db.execute(
-            `SELECT id, badge_number, rank_title, last_name 
+            `SELECT id, badge_number, rank_title, first_name, last_name 
              FROM users 
-             WHERE id = ? AND role IN ('Investigating Officer', 'investigator') AND is_active = 1`,
-            [investigator_id]
+             WHERE id IN (${placeholders}) AND role IN ('Investigating Officer', 'investigator') AND is_active = 1`,
+            investigatorIds
         );
 
         if (inv.length === 0) {
-            req.flash('error', 'Selected officer is not an active investigator.');
+            req.flash('error', 'Selected officers are not active investigators.');
             return res.redirect('/supervisor/dashboard');
         }
 
+        const [caseRows] = await db.execute('SELECT id FROM cases WHERE id = ?', [case_id]);
+        if (caseRows.length === 0) {
+            req.flash('error', 'Case record not found.');
+            return res.redirect('/supervisor/dashboard');
+        }
 
-        const [existing] = await db.execute('SELECT assigned_officer_id FROM cases WHERE id = ?', [case_id]);
-        const isReassignment = existing.length > 0 && existing[0].assigned_officer_id !== null;
+        const [existing] = await db.execute(
+            'SELECT COUNT(*) AS cnt FROM case_investigators WHERE case_id = ?',
+            [case_id]
+        );
+        const hadPrevious = existing[0].cnt > 0;
 
+        await syncCaseInvestigators(case_id, investigatorIds, supervisorId);
 
-        const [updateResult] = await db.execute(
+        await db.execute(
             `UPDATE cases 
-             SET assigned_officer_id = ?, status = 'Under Investigation', updated_at = NOW() 
+             SET status = 'Under Investigation', updated_at = NOW() 
              WHERE id = ?`,
-            [investigator_id, case_id]
+            [case_id]
         );
 
-        if (updateResult.affectedRows === 0) {
-            req.flash('error', 'Case record not found or could not be updated.');
-            return res.redirect('/supervisor/dashboard');
-        }
-
+        const officerNames = inv.map(i => `${i.rank_title} ${i.last_name} (${i.badge_number})`).join(', ');
 
         await db.execute(
             `INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)`,
             [
                 supervisorId,
-                isReassignment ? 'CASE_REASSIGNED' : 'CASE_ASSIGNED',
-                `${isReassignment ? 'Reassigned' : 'Assigned'} Case ID ${case_id} to Investigator ${inv[0].rank_title} ${inv[0].last_name} (${inv[0].badge_number}). ${notes ? 'Note: ' + notes : ''}`,
+                hadPrevious ? 'CASE_REASSIGNED' : 'CASE_ASSIGNED',
+                `${hadPrevious ? 'Updated investigators for' : 'Assigned'} Case ID ${case_id} to Investigator(s): ${officerNames}. ${notes ? 'Note: ' + notes : ''}`,
                 getClientIp(req)
             ]
         );
 
-        req.flash('success', `Case ${isReassignment ? 'reassigned' : 'assigned'} successfully to Officer ${inv[0].last_name}.`);
+        const shortNames = inv.map(i => i.last_name).join(', ');
+        req.flash('success', `Case assigned successfully to Officer(s): ${shortNames}.`);
         res.redirect('/supervisor/dashboard');
     } catch (err) {
         next(err);
@@ -396,9 +412,10 @@ exports.exportStationPerformancePDF = async (req, res, next) => {
 
         const [workload] = await db.execute(`
             SELECT u.rank_title, u.first_name, u.last_name, u.badge_number,
-                COUNT(c.id) AS active_cases
+                COUNT(DISTINCT c.id) AS active_cases
             FROM users u
-            LEFT JOIN cases c ON u.id = c.assigned_officer_id AND c.status = 'Under Investigation'
+            LEFT JOIN case_investigators ci ON u.id = ci.investigator_id
+            LEFT JOIN cases c ON ci.case_id = c.id AND c.status = 'Under Investigation'
             WHERE u.role IN ('Investigating Officer', 'investigator') AND u.is_active = 1
             GROUP BY u.id
             ORDER BY active_cases DESC
@@ -513,11 +530,12 @@ exports.exportOfficerProductivityPDF = async (req, res, next) => {
         const [officers] = await db.execute(`
             SELECT 
                 u.badge_number, u.rank_title, u.first_name, u.last_name,
-                COUNT(c.id) AS total_assigned,
+                COUNT(ci.case_id) AS total_assigned,
                 SUM(CASE WHEN c.status = 'Closed' THEN 1 ELSE 0 END) AS total_closed,
                 SUM(CASE WHEN c.status = 'Under Investigation' THEN 1 ELSE 0 END) AS total_active
             FROM users u
-            LEFT JOIN cases c ON u.id = c.assigned_officer_id
+            LEFT JOIN case_investigators ci ON u.id = ci.investigator_id
+            LEFT JOIN cases c ON ci.case_id = c.id
             WHERE u.role IN ('Investigating Officer', 'investigator') AND u.is_active = 1
             GROUP BY u.id
             ORDER BY total_assigned DESC

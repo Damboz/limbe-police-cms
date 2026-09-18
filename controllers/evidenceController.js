@@ -17,7 +17,7 @@ exports.getLedger = async (req, res, next) => {
             to: req.query.to || ''
         };
 
-        const scopeConditions = (isCommander || isAdmin) ? [] : ['c.assigned_officer_id = ?'];
+        const scopeConditions = (isCommander || isAdmin) ? [] : ['c.id IN (SELECT ci.case_id FROM case_investigators ci WHERE ci.investigator_id = ?)'];
         const scopeParams = (isCommander || isAdmin) ? [] : [user.id];
 
         const filterConditions = [];
@@ -89,7 +89,6 @@ exports.getLedger = async (req, res, next) => {
                 e.collected_at,
                 e.status,
                 c.ob_number,
-                c.assigned_officer_id,
                 c.incident_location,
                 cc.name AS crime_category,
                 CONCAT(u.rank_title, ' ', u.first_name, ' ', u.last_name) AS collected_by_name

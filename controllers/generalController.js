@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { isAssignedInvestigator, getAssignedInvestigators } = require('../services/assignmentService');
 
 const OVERDUE_DAYS_THRESHOLD = 14;
 
@@ -15,13 +16,14 @@ exports.getDashboard = async (req, res, next) => {
         if (role === 'Investigating Officer') {
             const [[kpi]] = await db.execute(`
                 SELECT 
-                    COUNT(*) AS totalAssigned,
-                    SUM(CASE WHEN status = 'Under Investigation' THEN 1 ELSE 0 END) AS activeCount,
-                    SUM(CASE WHEN status = 'Under Investigation' AND DATEDIFF(CURDATE(), created_at) > ${OVERDUE_DAYS_THRESHOLD} THEN 1 ELSE 0 END) AS overdueCount,
-                    SUM(CASE WHEN status = 'Closed' THEN 1 ELSE 0 END) AS closedCount,
-                    SUM(CASE WHEN requested_status IS NOT NULL THEN 1 ELSE 0 END) AS pendingRequestCount
-                FROM cases
-                WHERE assigned_officer_id = ?
+                    COUNT(DISTINCT c.id) AS totalAssigned,
+                    SUM(CASE WHEN c.status = 'Under Investigation' THEN 1 ELSE 0 END) AS activeCount,
+                    SUM(CASE WHEN c.status = 'Under Investigation' AND DATEDIFF(CURDATE(), c.created_at) > ${OVERDUE_DAYS_THRESHOLD} THEN 1 ELSE 0 END) AS overdueCount,
+                    SUM(CASE WHEN c.status = 'Closed' THEN 1 ELSE 0 END) AS closedCount,
+                    SUM(CASE WHEN c.requested_status IS NOT NULL THEN 1 ELSE 0 END) AS pendingRequestCount
+                FROM cases c
+                JOIN case_investigators ci ON c.id = ci.case_id
+                WHERE ci.investigator_id = ?
             `, [user.id]);
 
             const [assignedCases] = await db.execute(`
@@ -30,8 +32,10 @@ exports.getDashboard = async (req, res, next) => {
                     c.priority, c.status, c.requested_status, c.created_at,
                     DATEDIFF(CURDATE(), c.created_at) AS days_open
                 FROM cases c
+                JOIN case_investigators ci ON c.id = ci.case_id
                 LEFT JOIN crime_categories cc ON c.category_id = cc.id
-                WHERE c.assigned_officer_id = ?
+                WHERE ci.investigator_id = ?
+                GROUP BY c.id
                 ORDER BY FIELD(c.priority, 'Critical', 'High', 'Medium', 'Low'), c.created_at ASC
             `, [user.id]);
 
@@ -88,13 +92,11 @@ exports.getCaseDetail = async (req, res, next) => {
                 cc.name AS crime_category,
                 su.name AS unit_name,
                 CONCAT(intake.rank_title, ' ', intake.first_name, ' ', intake.last_name) AS intake_officer_name,
-                CONCAT(assigned.rank_title, ' ', assigned.first_name, ' ', assigned.last_name) AS assigned_officer_name,
                 CONCAT(req_user.rank_title, ' ', req_user.first_name, ' ', req_user.last_name) AS status_requested_by_name
             FROM cases c
             LEFT JOIN crime_categories cc ON c.category_id = cc.id
             LEFT JOIN station_units su ON c.unit_id = su.id
             LEFT JOIN users intake ON c.intake_officer_id = intake.id
-            LEFT JOIN users assigned ON c.assigned_officer_id = assigned.id
             LEFT JOIN users req_user ON c.status_requested_by = req_user.id
             WHERE c.id = ?
         `, [id]);
@@ -104,6 +106,10 @@ exports.getCaseDetail = async (req, res, next) => {
             return res.redirect('/cases');
         }
         const caseItem = rows[0];
+
+        const investigators = await getAssignedInvestigators(id);
+        const assignedInvestigatorIds = investigators.map(inv => inv.id);
+        const assignedInvestigatorNames = investigators.map(inv => `${inv.rank_title} ${inv.first_name} ${inv.last_name}`);
 
         const [notes] = await db.execute(`
             SELECT n.id, n.note, n.created_at, CONCAT(u.rank_title, ' ', u.first_name, ' ', u.last_name) AS officer_name
@@ -136,7 +142,7 @@ exports.getCaseDetail = async (req, res, next) => {
         `, [id]);
 
 
-        const isAssignedInvestigator = user.role === 'Investigating Officer' && caseItem.assigned_officer_id === user.id;
+        const isAssignedInvestigator = user.role === 'Investigating Officer' && assignedInvestigatorIds.includes(user.id);
         const isIntakeOfficer = user.role === 'Counter/Intake Officer';
         const isSupervisor = ['Station Commander', 'Admin'].includes(user.role);
 
@@ -150,6 +156,8 @@ exports.getCaseDetail = async (req, res, next) => {
         res.render('cases/detail', {
             title: `Case ${caseItem.ob_number} | Limbe Police CMS`,
             caseItem,
+            investigators,
+            assignedInvestigatorNames,
             notes,
             evidenceItems,
             suspects,
@@ -173,13 +181,14 @@ exports.addCaseNote = async (req, res, next) => {
             return res.redirect(`/cases/${id}`);
         }
 
-        const [caseRows] = await db.execute('SELECT assigned_officer_id FROM cases WHERE id = ?', [id]);
+        const [caseRows] = await db.execute('SELECT id FROM cases WHERE id = ?', [id]);
         if (caseRows.length === 0) {
             req.flash('error', 'Case not found.');
             return res.redirect('/cases');
         }
-        if (user.role !== 'Investigating Officer' || caseRows[0].assigned_officer_id !== user.id) {
-            req.flash('error', 'Only the assigned investigator can add notes to this case.');
+        const isAssigned = await isAssignedInvestigator(id, user.id);
+        if (user.role !== 'Investigating Officer' || !isAssigned) {
+            req.flash('error', 'Only investigators assigned to this case can add notes.');
             return res.redirect(`/cases/${id}`);
         }
 
@@ -213,7 +222,7 @@ exports.requestStatusChange = async (req, res, next) => {
         }
 
         const [caseRows] = await db.execute(
-            'SELECT assigned_officer_id, status, requested_status FROM cases WHERE id = ?',
+            'SELECT status, requested_status FROM cases WHERE id = ?',
             [id]
         );
         if (caseRows.length === 0) {
@@ -222,8 +231,9 @@ exports.requestStatusChange = async (req, res, next) => {
         }
         const current = caseRows[0];
 
-        if (user.role !== 'Investigating Officer' || current.assigned_officer_id !== user.id) {
-            req.flash('error', 'Only the assigned investigator can request a status change.');
+        const isAssigned = await isAssignedInvestigator(id, user.id);
+        if (user.role !== 'Investigating Officer' || !isAssigned) {
+            req.flash('error', 'Only investigators assigned to this case can request a status change.');
             return res.redirect(`/cases/${id}`);
         }
         if (current.requested_status) {
@@ -257,13 +267,14 @@ exports.addEvidence = async (req, res, next) => {
         const { item_number, description, category, storage_location, collected_at } = req.body;
         const user = req.session.user;
 
-        const [caseRows] = await db.execute('SELECT assigned_officer_id FROM cases WHERE id = ?', [id]);
+        const [caseRows] = await db.execute('SELECT id FROM cases WHERE id = ?', [id]);
         if (caseRows.length === 0) {
             req.flash('error', 'Case not found.');
             return res.redirect('/cases');
         }
-        if (user.role !== 'Investigating Officer' || caseRows[0].assigned_officer_id !== user.id) {
-            req.flash('error', 'Only the assigned investigator can log evidence for this case.');
+        const isAssigned = await isAssignedInvestigator(id, user.id);
+        if (user.role !== 'Investigating Officer' || !isAssigned) {
+            req.flash('error', 'Only investigators assigned to this case can log evidence.');
             return res.redirect(`/cases/${id}`);
         }
 
@@ -302,13 +313,14 @@ exports.linkSuspect = async (req, res, next) => {
             return res.redirect(`/cases/${id}`);
         }
 
-        const [caseRows] = await db.execute('SELECT assigned_officer_id FROM cases WHERE id = ?', [id]);
+        const [caseRows] = await db.execute('SELECT id FROM cases WHERE id = ?', [id]);
         if (caseRows.length === 0) {
             req.flash('error', 'Case not found.');
             return res.redirect('/cases');
         }
 
-        const allowed = (user.role === 'Investigating Officer' && caseRows[0].assigned_officer_id === user.id)
+        const isAssigned = await isAssignedInvestigator(id, user.id);
+        const allowed = (user.role === 'Investigating Officer' && isAssigned)
             || ['Counter/Intake Officer', 'Station Commander', 'Admin'].includes(user.role);
         if (!allowed) {
             req.flash('error', 'You do not have permission to link suspects to this case.');
@@ -350,13 +362,14 @@ exports.linkVictim = async (req, res, next) => {
             return res.redirect(`/cases/${id}`);
         }
 
-        const [caseRows] = await db.execute('SELECT assigned_officer_id FROM cases WHERE id = ?', [id]);
+        const [caseRows] = await db.execute('SELECT id FROM cases WHERE id = ?', [id]);
         if (caseRows.length === 0) {
             req.flash('error', 'Case not found.');
             return res.redirect('/cases');
         }
 
-        const allowed = (user.role === 'Investigating Officer' && caseRows[0].assigned_officer_id === user.id)
+        const isAssigned = await isAssignedInvestigator(id, user.id);
+        const allowed = (user.role === 'Investigating Officer' && isAssigned)
             || ['Counter/Intake Officer', 'Station Commander', 'Admin'].includes(user.role);
         if (!allowed) {
             req.flash('error', 'You do not have permission to link victims to this case.');
