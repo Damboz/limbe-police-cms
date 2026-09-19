@@ -25,6 +25,7 @@ router.post('/users/:id/reset-password', adminController.postResetPassword);
 
 
 router.post('/users/:id/toggle-status', adminController.toggleUserStatus);
+router.post('/users/:id/delete', adminController.deleteUser);
 
 
 router.get('/audit-logs', adminController.getAuditLogs);

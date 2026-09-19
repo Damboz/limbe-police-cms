@@ -389,6 +389,63 @@ exports.toggleUserStatus = async (req, res, next) => {
 };
 
 
+exports.deleteUser = async (req, res, next) => {
+    try {
+        const userId = req.params.id;
+        const currentUserId = (req.session && req.session.user) ? req.session.user.id : (req.user ? req.user.id : null);
+
+        if (currentUserId && parseInt(userId, 10) === parseInt(currentUserId, 10)) {
+            req.flash('error', 'You cannot delete your own account.');
+            return res.redirect('/admin/users');
+        }
+
+        const [users] = await db.execute(
+            'SELECT is_active, badge_number, first_name, last_name, role FROM users WHERE id = ?',
+            [userId]
+        );
+        if (users.length === 0) {
+            req.flash('error', 'User account not found.');
+            return res.redirect('/admin/users');
+        }
+
+        const target = users[0];
+        if (target.is_active) {
+            req.flash('error', `Account ${target.badge_number} is active. Only deactivated (inactive) accounts can be deleted.`);
+            return res.redirect('/admin/users');
+        }
+
+        const [refs] = await db.execute(`
+            SELECT
+                (SELECT COUNT(*) FROM cases  WHERE intake_officer_id = ?)          AS intake_cases,
+                (SELECT COUNT(*) FROM evidence WHERE collected_by_officer_id = ?)   AS evidence_records,
+                (SELECT COUNT(*) FROM case_notes WHERE officer_id = ?)              AS case_notes
+        `, [userId, userId, userId]);
+
+        const intakeCases = refs[0]?.intake_cases || 0;
+        const evidenceRecords = refs[0]?.evidence_records || 0;
+        const notesCount = refs[0]?.case_notes || 0;
+
+        if (intakeCases > 0 || evidenceRecords > 0 || notesCount > 0) {
+            req.flash('error',
+                `Cannot delete ${target.badge_number} — the account has historical records (${intakeCases} case(s) as intake officer, ${evidenceRecords} evidence record(s), ${notesCount} case note(s)). Deactivate instead.`);
+            return res.redirect('/admin/users');
+        }
+
+        await db.execute('DELETE FROM users WHERE id = ?', [userId]);
+
+        await db.execute(
+            'INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)',
+            [currentUserId, 'USER_DELETED', `Deleted deactivated account ${target.badge_number} (${target.role || 'No Role'})`, getClientIp(req)]
+        );
+
+        req.flash('success', `Account ${target.badge_number} (${target.first_name} ${target.last_name}) has been permanently deleted.`);
+        res.redirect('/admin/users');
+    } catch (err) {
+        next(err);
+    }
+};
+
+
 exports.clearAuditLogs = async (req, res, next) => {
     try {
         const currentUser = req.session.user;

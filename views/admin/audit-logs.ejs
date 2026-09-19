@@ -141,6 +141,8 @@
                                                 <span class="badge bg-secondary">USER_LOGOUT</span>
                                             <% } else if (log.action === 'USER_CREATED') { %>
                                                 <span class="badge bg-primary">USER_CREATED</span>
+                                            <% } else if (log.action === 'USER_DELETED') { %>
+                                                <span class="badge bg-danger">USER_DELETED</span>
                                             <% } else if (log.action === 'USER_UPDATED') { %>
                                                 <span class="badge bg-info">USER_UPDATED</span>
                                             <% } else if (log.action === 'PASSWORD_RESET') { %>

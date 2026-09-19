@@ -115,6 +115,14 @@
                                                         <i class="bi <%= user.is_active ? 'bi-person-x' : 'bi-person-check' %>"></i>
                                                     </button>
                                                 </form>
+                                                <% if (!user.is_active) { %>
+                                                    <form action="/admin/users/<%= user.id %>/delete" method="POST" class="d-inline"
+                                                          onsubmit="return confirm('Permanently delete this deactivated account? This cannot be undone.');">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger ms-1" title="Delete Account">
+                                                            <i class="bi bi-trash3"></i>
+                                                        </button>
+                                                    </form>
+                                                <% } %>
                                             </div>
                                         </td>
                                     </tr>
