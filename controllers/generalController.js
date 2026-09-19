@@ -18,7 +18,7 @@ exports.getDashboard = async (req, res, next) => {
                 SELECT 
                     COUNT(DISTINCT c.id) AS totalAssigned,
                     SUM(CASE WHEN c.status = 'Under Investigation' THEN 1 ELSE 0 END) AS activeCount,
-                    SUM(CASE WHEN c.status = 'Under Investigation' AND DATEDIFF(CURDATE(), c.created_at) > ${OVERDUE_DAYS_THRESHOLD} THEN 1 ELSE 0 END) AS overdueCount,
+                    SUM(CASE WHEN c.status = 'Under Investigation' AND CURRENT_DATE - c.created_at::date > ${OVERDUE_DAYS_THRESHOLD} THEN 1 ELSE 0 END) AS overdueCount,
                     SUM(CASE WHEN c.status = 'Closed' THEN 1 ELSE 0 END) AS closedCount,
                     SUM(CASE WHEN c.requested_status IS NOT NULL THEN 1 ELSE 0 END) AS pendingRequestCount
                 FROM cases c
@@ -30,13 +30,13 @@ exports.getDashboard = async (req, res, next) => {
                 SELECT 
                     c.id, c.ob_number, c.incident_details AS title, cc.name AS crime_category,
                     c.priority, c.status, c.requested_status, c.created_at,
-                    DATEDIFF(CURDATE(), c.created_at) AS days_open
+                    CURRENT_DATE - c.created_at::date AS days_open
                 FROM cases c
                 JOIN case_investigators ci ON c.id = ci.case_id
                 LEFT JOIN crime_categories cc ON c.category_id = cc.id
                 WHERE ci.investigator_id = ?
-                GROUP BY c.id
-                ORDER BY FIELD(c.priority, 'Critical', 'High', 'Medium', 'Low'), c.created_at ASC
+                GROUP BY c.id, cc.name
+                ORDER BY CASE c.priority WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 WHEN 'Low' THEN 4 ELSE 5 END, c.created_at ASC
             `, [user.id]);
 
             return res.render('general/dashboard', {
@@ -58,7 +58,7 @@ exports.getDashboard = async (req, res, next) => {
         const [[intakeStats]] = await db.execute(`
             SELECT COUNT(*) AS totalIntake
             FROM cases
-            WHERE intake_officer_id = ? AND DATE(created_at) = CURDATE()
+            WHERE intake_officer_id = ? AND DATE(created_at) = CURRENT_DATE
         `, [user.id]);
 
         const [recentIntakes] = await db.execute(`

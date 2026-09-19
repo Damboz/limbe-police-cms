@@ -1,21 +1,11 @@
+﻿-- ============================================================
+-- Limbe Police CMS - Neon (PostgreSQL) Schema + Seed (SQL Editor safe)
+-- Runs entirely inside the target database (limbe_police_cms):
+--   - no CREATE DATABASE (already connected)
+--   - no psql meta-commands (\connect / \set ON_ERROR_STOP)
+-- Usage: open Neon SQL Editor for the limbe_police_cms database
+--        and paste the whole file. Drops + recreates tables.
 -- ============================================================
--- Limbe Police CMS - PostgreSQL Database Initialization Script
--- Server: PostgreSQL 12+
--- Usage:
---   psql -U postgres -f database/init.sql
---   (This drops and recreates the limbe_police_cms database.)
--- ============================================================
-
-\set ON_ERROR_STOP on
-
--- Create database (drop first if it exists)
-DROP DATABASE IF EXISTS limbe_police_cms;
-CREATE DATABASE limbe_police_cms
-  WITH
-  ENCODING 'UTF8'
-  TEMPLATE template0;
-
-\connect limbe_police_cms;
 
 -- Reset the public schema for a clean slate
 DROP SCHEMA IF EXISTS public CASCADE;

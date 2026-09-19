@@ -31,7 +31,7 @@ exports.getAdminDashboard = async (req, res, next) => {
     try {
         const [[{ totalUsers }]] = await db.execute('SELECT COUNT(*) AS totalUsers FROM users');
         const [[{ activeUsers }]] = await db.execute('SELECT COUNT(*) AS activeUsers FROM users WHERE is_active = 1');
-        const [[{ totalLogins }]] = await db.execute('SELECT COUNT(*) AS totalLogins FROM audit_logs WHERE action = "USER_LOGIN"');
+        const [[{ totalLogins }]] = await db.execute("SELECT COUNT(*) AS totalLogins FROM audit_logs WHERE action = 'USER_LOGIN'");
 
         const [[caseStats]] = await db.execute(`
             SELECT 

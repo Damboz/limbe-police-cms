@@ -313,13 +313,13 @@ exports.getMyAnalytics = async (req, res, next) => {
 
         const [monthlyTrends] = await db.execute(`
             SELECT 
-                DATE_FORMAT(c.created_at, '%b %Y') AS month_label,
+                TO_CHAR(c.created_at, 'Mon YYYY') AS month_label,
                 COUNT(*) AS total_cases,
                 SUM(CASE WHEN c.priority IN ('High', 'Critical') THEN 1 ELSE 0 END) AS severe_cases
             FROM cases c
             ${whereClause}
-            GROUP BY DATE_FORMAT(c.created_at, '%Y-%m'), month_label
-            ORDER BY DATE_FORMAT(c.created_at, '%Y-%m') ASC
+            GROUP BY TO_CHAR(c.created_at, 'YYYY-MM'), month_label
+            ORDER BY TO_CHAR(c.created_at, 'YYYY-MM') ASC
             LIMIT 12
         `, params);
 

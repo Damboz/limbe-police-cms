@@ -187,7 +187,11 @@ exports.sendInvitationSms = async function sendInvitationSms(phone, {
 
 exports.getSmsStatus = async function getSmsStatus() {
     const [[row]] = await db.execute(
-        `SELECT COUNT(*) AS total, SUM(status='SENT') AS sent, SUM(status='QUEUED') AS queued, SUM(status='FAILED') AS failed FROM sms_messages`
+        `SELECT COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE status = 'SENT') AS sent,
+                COUNT(*) FILTER (WHERE status = 'QUEUED') AS queued,
+                COUNT(*) FILTER (WHERE status = 'FAILED') AS failed
+         FROM sms_messages`
     );
     return row;
 };

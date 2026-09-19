@@ -20,16 +20,16 @@ let dbPool;
 try {
     dbPool = require('./config/db');
 } catch (e) {
-    const mysql = require('mysql2/promise');
-    dbPool = mysql.createPool({
-        host: process.env.DB_HOST || 'localhost',
-        user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || process.env.DB_PASS || '',
-        database: process.env.DB_NAME || 'limbe_police_cms',
-        port: process.env.DB_PORT || 3306,
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit: 0
+    const { Pool } = require('pg');
+    const sslRequired = ['require', 'verify-ca', 'verify-full'].includes((process.env.PGSSLMODE || '').toLowerCase());
+    dbPool = new Pool({
+        host: process.env.PGHOST || process.env.DB_HOST || 'localhost',
+        user: process.env.PGUSER || process.env.DB_USER || 'postgres',
+        password: process.env.PGPASSWORD || process.env.DB_PASSWORD || process.env.DB_PASS || '',
+        database: process.env.PGDATABASE || process.env.DB_NAME || 'limbe_police_cms',
+        port: Number(process.env.PGPORT || process.env.DB_PORT || 5432),
+        ssl: sslRequired ? { rejectUnauthorized: false } : undefined,
+        max: 10
     });
 }
 
@@ -151,8 +151,10 @@ app.use((err, req, res, next) => {
 });
 
 
-app.listen(PORT, () => {
-    console.log(`Limbe Police Station Web Portal Live: http://localhost:${PORT}`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Limbe Police Station Web Portal Live: http://localhost:${PORT}`);
+    });
+}
 
 module.exports = app;

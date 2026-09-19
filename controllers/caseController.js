@@ -6,7 +6,7 @@ async function generateObNumber() {
     const datePart = today.toISOString().slice(0, 10).replace(/-/g, '');
 
     const [[{ todayCount }]] = await db.execute(
-        `SELECT COUNT(*) AS todayCount FROM cases WHERE DATE(created_at) = CURDATE()`
+        `SELECT COUNT(*) AS todayCount FROM cases WHERE DATE(created_at) = CURRENT_DATE`
     );
 
     const sequence = String(todayCount + 1).padStart(4, '0');
@@ -28,8 +28,8 @@ exports.getCaseList = async (req, res, next) => {
                     cc.name AS crime_category,
                     su.name AS unit_name,
                     CONCAT(intake.rank_title, ' ', intake.first_name, ' ', intake.last_name) AS intake_officer_name,
-                    GROUP_CONCAT(DISTINCT CONCAT(assigned.rank_title, ' ', assigned.first_name, ' ', assigned.last_name)
-                        ORDER BY ci.is_lead DESC, assigned.last_name SEPARATOR ', ') AS assigned_officer_name,
+                    STRING_AGG(CONCAT(assigned.rank_title, ' ', assigned.first_name, ' ', assigned.last_name),
+                        ', ' ORDER BY ci.is_lead DESC, assigned.last_name) AS assigned_officer_name,
                     COUNT(DISTINCT ci.investigator_id) AS investigator_count
                 FROM cases c
                 LEFT JOIN crime_categories cc ON c.category_id = cc.id
@@ -43,14 +43,14 @@ exports.getCaseList = async (req, res, next) => {
             query = `
                 ${baseSelect}
                 WHERE c.id IN (SELECT DISTINCT case_id FROM case_investigators WHERE investigator_id = ?)
-                GROUP BY c.id
+                GROUP BY c.id, cc.name, su.name, intake.rank_title, intake.first_name, intake.last_name
                 ORDER BY c.created_at DESC
             `;
             params = [user.id];
         } else {
             query = `
                 ${baseSelect}
-                GROUP BY c.id
+                GROUP BY c.id, cc.name, su.name, intake.rank_title, intake.first_name, intake.last_name
                 ORDER BY c.created_at DESC
             `;
         }

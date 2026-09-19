@@ -18,7 +18,7 @@ const [[kpiCounts]] = await db.execute(`
                 SUM(CASE WHEN NOT EXISTS (SELECT 1 FROM case_investigators ci WHERE ci.case_id = c.id) AND c.status != 'Closed' THEN 1 ELSE 0 END) AS unassignedCount,
                 SUM(CASE WHEN c.requested_status IS NOT NULL THEN 1 ELSE 0 END) AS pendingApprovalsCount,
                 SUM(CASE WHEN c.status = 'Under Investigation' THEN 1 ELSE 0 END) AS activeCasesCount,
-                SUM(CASE WHEN c.status = 'Under Investigation' AND DATEDIFF(CURDATE(), c.created_at) > ${OVERDUE_DAYS_THRESHOLD} THEN 1 ELSE 0 END) AS overdueCount
+                SUM(CASE WHEN c.status = 'Under Investigation' AND CURRENT_DATE - c.created_at::date > ${OVERDUE_DAYS_THRESHOLD} THEN 1 ELSE 0 END) AS overdueCount
             FROM cases c
         `);
 
@@ -37,7 +37,7 @@ const [[kpiCounts]] = await db.execute(`
             LEFT JOIN users u ON c.intake_officer_id = u.id
             WHERE NOT EXISTS (SELECT 1 FROM case_investigators ci WHERE ci.case_id = c.id)
               AND c.status != 'Closed'
-            ORDER BY FIELD(c.priority, 'Critical', 'High', 'Medium', 'Low'), c.created_at ASC
+            ORDER BY CASE c.priority WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 WHEN 'Low' THEN 4 ELSE 5 END, c.created_at ASC
             LIMIT 10
         `);
 
@@ -85,16 +85,16 @@ const [[kpiCounts]] = await db.execute(`
                 c.priority, 
                 c.status, 
                 c.created_at,
-                DATEDIFF(CURDATE(), c.created_at) AS days_open,
-                GROUP_CONCAT(DISTINCT inv.id ORDER BY ci.is_lead DESC, inv.last_name) AS investigator_ids,
-                GROUP_CONCAT(DISTINCT CONCAT(inv.rank_title, ' ', inv.first_name, ' ', inv.last_name)
-                    ORDER BY ci.is_lead DESC, inv.last_name SEPARATOR ', ') AS investigator_names
+                CURRENT_DATE - c.created_at::date AS days_open,
+                STRING_AGG(inv.id::text, ',' ORDER BY ci.is_lead DESC, inv.last_name) AS investigator_ids,
+                STRING_AGG(CONCAT(inv.rank_title, ' ', inv.first_name, ' ', inv.last_name)
+                    , ', ' ORDER BY ci.is_lead DESC, inv.last_name) AS investigator_names
             FROM cases c
             LEFT JOIN crime_categories cc ON c.category_id = cc.id
             JOIN case_investigators ci ON c.id = ci.case_id
             LEFT JOIN users inv ON ci.investigator_id = inv.id
             WHERE c.status NOT IN ('Closed', 'Archived')
-            GROUP BY c.id
+            GROUP BY c.id, cc.name
             ORDER BY days_open DESC
             LIMIT 15
         `);
@@ -256,12 +256,12 @@ exports.getAnalytics = async (req, res, next) => {
 
             db.execute(`
                 SELECT 
-                    DATE_FORMAT(created_at, '%Y-%m') AS month_key,
-                    DATE_FORMAT(created_at, '%b %Y') AS month_label,
+                    TO_CHAR(created_at, 'YYYY-MM') AS month_key,
+                    TO_CHAR(created_at, 'Mon YYYY') AS month_label,
                     COUNT(*) AS total_cases,
                     SUM(CASE WHEN priority IN ('High', 'Critical') THEN 1 ELSE 0 END) AS severe_cases
                 FROM cases
-                WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+                WHERE created_at >= CURRENT_DATE - INTERVAL '12 months'
                 GROUP BY month_key, month_label
                 ORDER BY month_key ASC
             `),
@@ -328,11 +328,11 @@ exports.getAnalyticsData = async (req, res, next) => {
     try {
         const [[trends], [categories], [hotspots]] = await Promise.all([
             db.execute(`
-                SELECT DATE_FORMAT(created_at, '%b %Y') AS label, COUNT(*) AS count 
+                SELECT TO_CHAR(created_at, 'Mon YYYY') AS label, COUNT(*) AS count 
                 FROM cases 
-                WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-                GROUP BY DATE_FORMAT(created_at, '%Y-%m'), label 
-                ORDER BY DATE_FORMAT(created_at, '%Y-%m') ASC
+                WHERE created_at >= CURRENT_DATE - INTERVAL '6 months'
+                GROUP BY TO_CHAR(created_at, 'YYYY-MM'), label 
+                ORDER BY TO_CHAR(created_at, 'YYYY-MM') ASC
             `),
             db.execute(`
                 SELECT cc.name AS label, COUNT(c.id) AS count 
@@ -398,7 +398,7 @@ exports.exportStationPerformancePDF = async (req, res, next) => {
                 COUNT(*) AS totalCases,
                 SUM(CASE WHEN status = 'Closed' THEN 1 ELSE 0 END) AS closedCases,
                 SUM(CASE WHEN status NOT IN ('Closed', 'Archived') THEN 1 ELSE 0 END) AS activeCases,
-                SUM(CASE WHEN status = 'Under Investigation' AND DATEDIFF(CURDATE(), created_at) > ${OVERDUE_DAYS_THRESHOLD} THEN 1 ELSE 0 END) AS overdueCases
+                SUM(CASE WHEN status = 'Under Investigation' AND CURRENT_DATE - created_at::date > ${OVERDUE_DAYS_THRESHOLD} THEN 1 ELSE 0 END) AS overdueCases
             FROM cases
         `);
 
@@ -468,13 +468,13 @@ exports.exportCrimeStatsPDF = async (req, res, next) => {
     try {
         const [monthlyTrends] = await db.execute(`
             SELECT 
-                DATE_FORMAT(created_at, '%b %Y') AS month_label,
+                TO_CHAR(created_at, 'Mon YYYY') AS month_label,
                 COUNT(*) AS total_cases,
                 SUM(CASE WHEN priority IN ('High', 'Critical') THEN 1 ELSE 0 END) AS severe_cases
             FROM cases
-            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
-            GROUP BY DATE_FORMAT(created_at, '%Y-%m'), month_label
-            ORDER BY DATE_FORMAT(created_at, '%Y-%m') ASC
+            WHERE created_at >= CURRENT_DATE - INTERVAL '12 months'
+            GROUP BY TO_CHAR(created_at, 'YYYY-MM'), month_label
+            ORDER BY TO_CHAR(created_at, 'YYYY-MM') ASC
         `);
 
         const [hotspots] = await db.execute(`
