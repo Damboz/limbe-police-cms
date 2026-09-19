@@ -1,0 +1,123 @@
+<%- include('../partials/header') %>
+
+<div class="app-wrapper">
+    <%- include('../partials/sidebar') %>
+
+    <div class="main-content">
+        <%- include('../partials/topbar') %>
+
+        <div class="container-fluid py-4">
+
+            
+            <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+                <div>
+                    <h4 class="fw-bold mb-1" style="color: var(--mps-navy);">
+                        <i class="bi bi-geo-alt-fill me-2 text-warning"></i>Top Incident Hotspots
+                    </h4>
+                    <p class="text-muted small mb-0">Full breakdown of reported incident locations across all recorded cases.</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="/supervisor/analytics" class="btn btn-outline-navy btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Analytics
+                    </a>
+                    <a href="/supervisor/dashboard" class="btn btn-navy btn-sm">
+                        <i class="bi bi-house-door-fill me-1"></i>Dashboard
+                    </a>
+                </div>
+            </div>
+
+            
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm p-3">
+                        <div class="metric-card">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Locations Tracked</span>
+                                <h3 class="fw-bold mb-0" style="color: var(--mps-navy);"><%= metrics.locations || 0 %></h3>
+                            </div>
+                            <div class="metric-icon navy"><i class="bi bi-geo-fill"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm p-3">
+                        <div class="metric-card">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Total Incidents</span>
+                                <h3 class="fw-bold mb-0" style="color: var(--mps-navy);"><%= metrics.totalIncidents || 0 %></h3>
+                            </div>
+                            <div class="metric-icon warning"><i class="bi bi-folder-fill"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm p-3">
+                        <div class="metric-card">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Resolved</span>
+                                <h3 class="fw-bold mb-0" style="color: var(--mps-success);"><%= metrics.totalResolved || 0 %></h3>
+                            </div>
+                            <div class="metric-icon success"><i class="bi bi-check-circle-fill"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm p-3">
+                        <div class="metric-card">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Under Investigation</span>
+                                <h3 class="fw-bold mb-0" style="color: var(--mps-warning);"><%= metrics.totalActive || 0 %></h3>
+                            </div>
+                            <div class="metric-icon blue"><i class="bi bi-hourglass-split"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-navy text-white py-3">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-table me-2 text-warning"></i>All Incident Hotspots
+                    </h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Location</th>
+                                <th class="text-end">Incidents</th>
+                                <th class="text-end">Share</th>
+                                <th class="text-end">Resolved</th>
+                                <th class="text-end">Under Investigation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (!hotspots || hotspots.length === 0) { %>
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">No location data available yet.</td>
+                                </tr>
+                            <% } else { %>
+                                <% hotspots.forEach((h, i) => { %>
+                                    <tr>
+                                        <td class="text-muted small"><%= i + 1 %></td>
+                                        <td class="small fw-semibold"><%= h.location %></td>
+                                        <td class="text-end fw-bold small"><%= h.incident_count || 0 %></td>
+                                        <td class="text-end small text-muted"><%= h.share || 0 %>%</td>
+                                        <td class="text-end small" style="color: var(--mps-success);"><%= h.resolved_count || 0 %></td>
+                                        <td class="text-end small" style="color: var(--mps-warning);"><%= h.active_count || 0 %></td>
+                                    </tr>
+                                <% }) %>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+<%- include('../partials/footer') %>

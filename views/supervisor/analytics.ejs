@@ -104,10 +104,13 @@
             <div class="row g-4 mb-4">
                 <div class="col-lg-6">
                     <div class="card border-0 shadow-sm h-100">
-                        <div class="card-header bg-navy text-white py-3">
+                        <div class="card-header bg-navy text-white py-3 d-flex align-items-center justify-content-between">
                             <h6 class="mb-0 fw-bold">
                                 <i class="bi bi-tags-fill me-2 text-warning"></i>Crime Category Breakdown
                             </h6>
+                            <a href="/supervisor/analytics/categories" class="btn btn-gold btn-sm">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>View Full Details
+                            </a>
                         </div>
                         <div class="card-body">
                             <canvas id="categoryBreakdownChart" height="220"></canvas>
@@ -141,7 +144,12 @@
                             <h6 class="mb-0 fw-bold">
                                 <i class="bi bi-geo-alt-fill me-2 text-warning"></i>Top Incident Hotspots
                             </h6>
-                            <span class="badge bg-gold text-dark">Top <%= (hotspots || []).length %></span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-gold text-dark">Top <%= (hotspots || []).length %></span>
+                                <a href="/supervisor/analytics/hotspots" class="btn btn-gold btn-sm">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>View Full Details
+                                </a>
+                            </div>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">

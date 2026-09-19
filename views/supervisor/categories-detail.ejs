@@ -1,0 +1,113 @@
+<%- include('../partials/header') %>
+
+<div class="app-wrapper">
+    <%- include('../partials/sidebar') %>
+
+    <div class="main-content">
+        <%- include('../partials/topbar') %>
+
+        <div class="container-fluid py-4">
+
+            
+            <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+                <div>
+                    <h4 class="fw-bold mb-1" style="color: var(--mps-navy);">
+                        <i class="bi bi-tags-fill me-2 text-warning"></i>Crime Category Breakdown
+                    </h4>
+                    <p class="text-muted small mb-0">Full incident distribution across all crime categories recorded at the station.</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="/supervisor/analytics" class="btn btn-outline-navy btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Analytics
+                    </a>
+                    <a href="/supervisor/dashboard" class="btn btn-navy btn-sm">
+                        <i class="bi bi-house-door-fill me-1"></i>Dashboard
+                    </a>
+                </div>
+            </div>
+
+            
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-xl-4">
+                    <div class="card border-0 shadow-sm p-3">
+                        <div class="metric-card">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Categories Tracked</span>
+                                <h3 class="fw-bold mb-0" style="color: var(--mps-navy);"><%= metrics.categories || 0 %></h3>
+                            </div>
+                            <div class="metric-icon navy"><i class="bi bi-tags"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-4">
+                    <div class="card border-0 shadow-sm p-3">
+                        <div class="metric-card">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Total Cases</span>
+                                <h3 class="fw-bold mb-0" style="color: var(--mps-warning);"><%= metrics.totalCases || 0 %></h3>
+                            </div>
+                            <div class="metric-icon warning"><i class="bi bi-folder-fill"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-4">
+                    <div class="card border-0 shadow-sm p-3">
+                        <div class="metric-card">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase d-block mb-1">Closed Cases</span>
+                                <h3 class="fw-bold mb-0" style="color: var(--mps-success);"><%= metrics.totalClosed || 0 %></h3>
+                            </div>
+                            <div class="metric-icon success"><i class="bi bi-check-circle-fill"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-navy text-white py-3">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-table me-2 text-warning"></i>All Crime Categories
+                    </h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Category</th>
+                                <th class="text-end">Cases</th>
+                                <th class="text-end">Share</th>
+                                <th class="text-end">Resolved Now</th>
+                                <th class="text-end">Under Investigation</th>
+                                <th class="text-end">High / Critical</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (!categories || categories.length === 0) { %>
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">No category data available yet.</td>
+                                </tr>
+                            <% } else { %>
+                                <% categories.forEach((c, i) => { %>
+                                    <tr>
+                                        <td class="text-muted small"><%= i + 1 %></td>
+                                        <td class="small fw-semibold"><%= c.crime_category || 'N/A' %></td>
+                                        <td class="text-end fw-bold small"><%= c.total_incidents || 0 %></td>
+                                        <td class="text-end small text-muted"><%= c.percentage || 0 %>%</td>
+                                        <td class="text-end small" style="color: var(--mps-success);"><%= c.closed_count || 0 %></td>
+                                        <td class="text-end small" style="color: var(--mps-warning);"><%= c.active_count || 0 %></td>
+                                        <td class="text-end small" style="color: var(--mps-danger);"><%= c.severe_count || 0 %></td>
+                                    </tr>
+                                <% }) %>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+<%- include('../partials/footer') %>

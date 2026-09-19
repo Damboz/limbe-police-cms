@@ -13,6 +13,8 @@ router.post('/cases/approve-status', supervisorController.processStatusApproval)
 
 
 router.get('/analytics', supervisorController.getAnalytics);
+router.get('/analytics/hotspots', supervisorController.getHotspotsDetail);
+router.get('/analytics/categories', supervisorController.getCategoryBreakdownDetail);
 router.get('/api/analytics-data', supervisorController.getAnalyticsData);
 
 

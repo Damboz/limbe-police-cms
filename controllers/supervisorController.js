@@ -324,6 +324,67 @@ exports.getAnalytics = async (req, res, next) => {
 };
 
 
+exports.getHotspotsDetail = async (req, res, next) => {
+    try {
+        const [hotspots] = await db.execute(`
+            SELECT 
+                incident_location AS location,
+                COUNT(*) AS incident_count,
+                SUM(CASE WHEN status = 'Closed' THEN 1 ELSE 0 END) AS resolved_count,
+                SUM(CASE WHEN status = 'Under Investigation' THEN 1 ELSE 0 END) AS active_count,
+                ROUND((COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM cases
+                        WHERE incident_location IS NOT NULL AND TRIM(incident_location) != ''), 0)), 1) AS share
+            FROM cases
+            WHERE incident_location IS NOT NULL AND TRIM(incident_location) != ''
+            GROUP BY incident_location
+            ORDER BY incident_count DESC
+        `);
+
+        const totalIncidents = hotspots.reduce((acc, h) => acc + (h.incident_count || 0), 0);
+        const totalResolved = hotspots.reduce((acc, h) => acc + (h.resolved_count || 0), 0);
+        const totalActive = hotspots.reduce((acc, h) => acc + (h.active_count || 0), 0);
+
+        res.render('supervisor/hotspots-detail', {
+            title: 'Top Incident Hotspots | Limbe Police CMS',
+            hotspots,
+            metrics: { locations: hotspots.length, totalIncidents, totalResolved, totalActive }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+
+exports.getCategoryBreakdownDetail = async (req, res, next) => {
+    try {
+        const [categories] = await db.execute(`
+            SELECT 
+                cc.name AS crime_category,
+                COUNT(c.id) AS total_incidents,
+                ROUND((COUNT(c.id) * 100.0 / NULLIF((SELECT COUNT(*) FROM cases), 0)), 1) AS percentage,
+                SUM(CASE WHEN c.status = 'Closed' THEN 1 ELSE 0 END) AS closed_count,
+                SUM(CASE WHEN c.status = 'Under Investigation' THEN 1 ELSE 0 END) AS active_count,
+                SUM(CASE WHEN c.priority IN ('High', 'Critical') THEN 1 ELSE 0 END) AS severe_count
+            FROM crime_categories cc
+            LEFT JOIN cases c ON cc.id = c.category_id
+            GROUP BY cc.id, cc.name
+            ORDER BY total_incidents DESC
+        `);
+
+        const totalCases = categories.reduce((acc, c) => acc + (c.total_incidents || 0), 0);
+        const totalClosed = categories.reduce((acc, c) => acc + (c.closed_count || 0), 0);
+
+        res.render('supervisor/categories-detail', {
+            title: 'Crime Category Breakdown | Limbe Police CMS',
+            categories,
+            metrics: { categories: categories.length, totalCases, totalClosed }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+
 exports.getAnalyticsData = async (req, res, next) => {
     try {
         const [[trends], [categories], [hotspots]] = await Promise.all([
