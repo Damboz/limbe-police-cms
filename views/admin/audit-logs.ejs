@@ -15,7 +15,26 @@
                     </h4>
                     <p class="text-muted small mb-0">Immutable records of system actions, logins, user updates, and security events.</p>
                 </div>
+                <form method="POST" action="/admin/audit-logs/clear"
+                      onsubmit="return confirm('Clear ALL security and audit trail logs? This cannot be undone.');">
+                    <button type="submit" class="btn btn-danger btn-sm">
+                        <i class="bi bi-trash3-fill me-1"></i>Clear Security Logs
+                    </button>
+                </form>
             </div>
+
+            <% if (typeof success !== 'undefined' && success && success.length > 0) { %>
+                <div class="alert alert-success alert-dismissible fade show small mb-4" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i><%= success %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <% } %>
+            <% if (typeof error !== 'undefined' && error && error.length > 0) { %>
+                <div class="alert alert-danger alert-dismissible fade show small mb-4" role="alert">
+                    <i class="bi bi-exclamation-octagon-fill me-2"></i><%= error %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <% } %>
 
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-navy text-white py-3">
@@ -152,6 +171,8 @@
                                                 <span class="badge bg-secondary">VICTIM_LINKED</span>
                                             <% } else if (log.action === 'STATUS_CHANGE') { %>
                                                 <span class="badge bg-warning text-dark">STATUS_CHANGE</span>
+                                            <% } else if (log.action === 'LOGS_CLEARED') { %>
+                                                <span class="badge bg-danger">LOGS_CLEARED</span>
                                             <% } else { %>
                                                 <span class="badge bg-dark"><%= log.action %></span>
                                             <% } %>

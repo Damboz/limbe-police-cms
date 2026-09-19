@@ -28,5 +28,6 @@ router.post('/users/:id/toggle-status', adminController.toggleUserStatus);
 
 
 router.get('/audit-logs', adminController.getAuditLogs);
+router.post('/audit-logs/clear', adminController.clearAuditLogs);
 
 module.exports = router;

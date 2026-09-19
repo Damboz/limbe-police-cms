@@ -389,6 +389,29 @@ exports.toggleUserStatus = async (req, res, next) => {
 };
 
 
+exports.clearAuditLogs = async (req, res, next) => {
+    try {
+        const currentUser = req.session.user;
+        const currentUserId = currentUser ? currentUser.id : null;
+        const details = currentUser
+            ? `Security and audit trail logs cleared by ${currentUser.badge_number || 'Administrator'}.`
+            : 'Security and audit trail logs cleared.';
+
+        await db.execute(`DELETE FROM audit_logs`);
+
+        await db.execute(
+            `INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)`,
+            [currentUserId, 'LOGS_CLEARED', details, getClientIp(req)]
+        );
+
+        req.flash('success', 'All security and audit logs have been cleared.');
+        res.redirect('/admin/audit-logs');
+    } catch (err) {
+        next(err);
+    }
+};
+
+
 exports.getAuditLogs = async (req, res, next) => {
     try {
         const search = req.query.search ? `%${req.query.search.trim()}%` : '';
